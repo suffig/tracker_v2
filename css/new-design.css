@@ -451,6 +451,14 @@ body {
   color: var(--text-muted);
 }
 
+.form-help {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 0.25rem;
+  line-height: 1.4;
+}
+
 /* --- PAGE LAYOUT --- */
 .page-container {
   max-width: 1200px;

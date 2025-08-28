@@ -171,9 +171,18 @@ let matchViewDate = new Date().toISOString().slice(0, 10); // Standard: heute
 
 // Optimized match list rendering with better error handling
 function renderMatchesList() {
+    // Check if we're currently on the matches tab before attempting to render
+    if (typeof window !== 'undefined' && window.currentTab && window.currentTab !== 'matches') {
+        return; // Silently return if not on matches tab
+    }
+    
     const container = DOM.getElementById('matches-list');
     if (!container) {
-        console.warn("Element #matches-list nicht gefunden!");
+        // Only warn if we're actually supposed to be on the matches tab
+        const isMatchesTabActive = document.querySelector('.nav-item.active')?.getAttribute('id') === 'nav-matches';
+        if (isMatchesTabActive) {
+            console.warn("Element #matches-list nicht gefunden!");
+        }
         return;
     }
 

@@ -27,6 +27,11 @@ let realtimeChannel = null;
 let isAppVisible = true;
 let inactivityCleanupTimer = null;
 
+// Make currentTab available globally for other modules
+if (typeof window !== 'undefined') {
+    window.currentTab = currentTab;
+}
+
 console.log("main.js gestartet");
 
 // --- Connection status indicator with enhanced messaging ---
@@ -364,6 +369,11 @@ async function switchTab(tab) {
     try {
         currentTab = tab;
         
+        // Update global window.currentTab for other modules
+        if (typeof window !== 'undefined') {
+            window.currentTab = currentTab;
+        }
+        
         // Update bottom navigation only
         updateBottomNavActive(tab);
         showTabLoader(true);
@@ -691,7 +701,7 @@ async function showLoginForm() {
                         <p class="login-subtitle">Melden Sie sich an, um fortzufahren</p>
                     </div>
                     
-                    <form id="loginform" class="space-y-6">
+                    <form id="loginform" class="space-y-6" autocomplete="on">
                         <div class="form-group">
                             <label for="email" class="form-label">E-Mail-Adresse</label>
                             <input 
@@ -699,9 +709,12 @@ async function showLoginForm() {
                                 id="email" 
                                 name="email" 
                                 required 
+                                autocomplete="username"
                                 placeholder="ihre@email.com" 
                                 class="form-input"
-                                value="${emailValue}" />
+                                value="${emailValue}"
+                                aria-describedby="email-help" />
+                            <small id="email-help" class="form-help">Geben Sie Ihre E-Mail-Adresse ein</small>
                         </div>
                         <div class="form-group">
                             <label for="pw" class="form-label">Passwort</label>
@@ -710,13 +723,17 @@ async function showLoginForm() {
                                 id="pw" 
                                 name="password" 
                                 required 
+                                autocomplete="current-password"
                                 placeholder="Ihr Passwort" 
                                 class="form-input"
-                                value="${pwValue}" />
+                                value="${pwValue}"
+                                aria-describedby="pw-help" />
+                            <small id="pw-help" class="form-help">Geben Sie Ihr Passwort ein</small>
                         </div>
                         <button
                             type="submit"
-                            class="btn btn-primary btn-lg w-full">
+                            class="btn btn-primary btn-lg w-full"
+                            aria-describedby="login-help">
                             <i class="fas fa-sign-in-alt"></i> Anmelden
                         </button>
                     </form>
@@ -724,18 +741,45 @@ async function showLoginForm() {
             </div>
         `;
         
-        // Setup form handler
+        // Setup form handler with enhanced validation
         const form = document.getElementById('loginform');
         if (form) {
+            // Add real-time validation
+            const emailInput = document.getElementById('email');
+            const passwordInput = document.getElementById('pw');
+            
+            if (emailInput) {
+                emailInput.addEventListener('blur', validateEmailInput);
+                emailInput.addEventListener('input', clearFieldError);
+            }
+            
+            if (passwordInput) {
+                passwordInput.addEventListener('blur', validatePasswordInput);
+                passwordInput.addEventListener('input', clearFieldError);
+            }
+            
             form.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const email = document.getElementById('email').value;
                 const password = document.getElementById('pw').value;
                 
+                // Clear previous errors
+                clearAllFieldErrors();
+                
+                // Validate inputs
+                try {
+                    FormValidator.validateRequired(email, 'E-Mail');
+                    FormValidator.validateEmail(email);
+                    FormValidator.validateRequired(password, 'Passwort');
+                } catch (error) {
+                    showFieldError(error.message.includes('E-Mail') ? 'email' : 'pw', error.message);
+                    return;
+                }
+                
                 console.log(`🔑 Attempting login with: ${email}`);
                 const submitBtn = form.querySelector('button[type="submit"]');
                 if (submitBtn) {
-                    submitBtn.textContent = 'Anmelden...';
+                    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Anmelden...';
                     submitBtn.disabled = true;
                 }
                 
@@ -744,6 +788,7 @@ async function showLoginForm() {
                     console.log('✅ Login successful, waiting for auth state change');
                 } catch (error) {
                     console.error('Login error:', error);
+                    ErrorHandler.showUserError('Anmeldung fehlgeschlagen. Bitte überprüfen Sie Ihre Eingaben.', 'error');
                 } finally {
                     if (submitBtn) {
                         submitBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Anmelden';
@@ -772,6 +817,70 @@ supabase.auth.onAuthStateChange(async (event, session) => {
         }
     }, 100);
 });
+
+// Form validation helper functions
+function validateEmailInput(e) {
+    const email = e.target.value;
+    try {
+        if (email) {
+            FormValidator.validateEmail(email);
+        }
+        clearFieldError('email');
+    } catch (error) {
+        showFieldError('email', error.message);
+    }
+}
+
+function validatePasswordInput(e) {
+    const password = e.target.value;
+    try {
+        if (password) {
+            FormValidator.validateRequired(password, 'Passwort');
+        }
+        clearFieldError('pw');
+    } catch (error) {
+        showFieldError('pw', error.message);
+    }
+}
+
+function showFieldError(fieldId, message) {
+    const field = document.getElementById(fieldId);
+    if (!field) return;
+    
+    // Remove existing error
+    clearFieldError(fieldId);
+    
+    // Add error styling
+    field.classList.add('border-red-500', 'focus:border-red-500');
+    
+    // Create error message
+    const errorDiv = document.createElement('div');
+    errorDiv.className = 'text-red-500 text-xs mt-1';
+    errorDiv.id = `${fieldId}-error`;
+    errorDiv.textContent = message;
+    
+    // Insert after the field
+    field.parentNode.insertBefore(errorDiv, field.nextSibling);
+}
+
+function clearFieldError(fieldId) {
+    const field = document.getElementById(fieldId);
+    if (!field) return;
+    
+    // Remove error styling
+    field.classList.remove('border-red-500', 'focus:border-red-500');
+    
+    // Remove error message
+    const errorDiv = document.getElementById(`${fieldId}-error`);
+    if (errorDiv) {
+        errorDiv.remove();
+    }
+}
+
+function clearAllFieldErrors() {
+    ['email', 'pw'].forEach(clearFieldError);
+}
+
 window.addEventListener('DOMContentLoaded', async () => {
 	console.log("DOMContentLoaded!");
     

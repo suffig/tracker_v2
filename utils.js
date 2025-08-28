@@ -27,11 +27,14 @@ export class Debug {
 
 // DOM Utility Functions
 export const DOM = {
-    // Safe element selection
+    // Safe element selection with enhanced debugging
     getElementById(id) {
         const element = document.getElementById(id);
         if (!element) {
-            console.warn(`Element with id '${id}' not found`);
+            // Only warn in development or if explicitly requested
+            if (window.location.hostname === 'localhost' || window.debugMode) {
+                console.warn(`Element with id '${id}' not found. Current page tab: ${window.currentTab || 'unknown'}`);
+            }
         }
         return element;
     },
