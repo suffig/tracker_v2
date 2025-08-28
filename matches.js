@@ -146,9 +146,33 @@ export async function renderMatchesTab(containerId = "app") {
                 <i class="fas fa-plus"></i> <span>Match hinzufügen</span>
             </button>
         </div>
+        
+        <!-- Enhanced Search and Filter Controls -->
+        <div class="mb-4 space-y-3">
+            <div class="flex flex-col sm:flex-row gap-2">
+                <div class="flex-1">
+                    <input type="text" id="match-search" placeholder="Nach Spielern, Datum oder Ergebnis suchen..." 
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent">
+                </div>
+                <div class="flex gap-2">
+                    <select id="match-filter-team" class="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
+                        <option value="">Alle Teams</option>
+                        <option value="AEK">AEK Athen</option>
+                        <option value="Real">Real Madrid</option>
+                    </select>
+                    <select id="match-filter-result" class="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
+                        <option value="">Alle Ergebnisse</option>
+                        <option value="aek-win">AEK Sieg</option>
+                        <option value="real-win">Real Sieg</option>
+                        <option value="draw">Unentschieden</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        
         <div id="matches-list" class="space-y-3">
             <div class="flex items-center justify-center py-8">
-                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                <div class="spinner"></div>
                 <span class="ml-2 text-gray-600">Lädt Matches...</span>
             </div>
         </div>
@@ -160,11 +184,115 @@ export async function renderMatchesTab(containerId = "app") {
         addMatchBtn.onclick = () => openMatchForm();
     }
 
+    // Setup search and filter functionality
+    setupMatchSearchAndFilters();
+
     // Subscribe to real-time changes
     matchesData.subscribeToChanges(renderMatchesList);
     
     // Load data
     await matchesData.loadAllData(renderMatchesList);
+}
+
+// Enhanced search and filter functionality for matches
+function setupMatchSearchAndFilters() {
+    const searchInput = DOM.getElementById('match-search');
+    const teamFilter = DOM.getElementById('match-filter-team');
+    const resultFilter = DOM.getElementById('match-filter-result');
+    
+    if (!searchInput || !teamFilter || !resultFilter) {
+        console.warn('Search/filter elements not found in DOM');
+        return;
+    }
+
+    // Store original matches data for filtering
+    let originalMatchesData = [];
+
+    // Debounced search function for better performance
+    const debouncedSearch = Performance.debounce(() => {
+        applyFilters();
+    }, 300);
+
+    // Apply filters function
+    function applyFilters() {
+        if (!originalMatchesData.length) {
+            originalMatchesData = [...matchesData.matches];
+        }
+
+        const searchTerm = searchInput.value.toLowerCase().trim();
+        const teamFilterValue = teamFilter.value;
+        const resultFilterValue = resultFilter.value;
+
+        let filteredMatches = originalMatchesData.filter(match => {
+            // Search term filter
+            if (searchTerm) {
+                const searchableText = [
+                    match.date,
+                    `${match.goalsa}:${match.goalsb}`,
+                    ...(match.goalslista || []).map(g => g.player),
+                    ...(match.goalslistb || []).map(g => g.player),
+                    match.manofthematch || ''
+                ].join(' ').toLowerCase();
+                
+                if (!searchableText.includes(searchTerm)) {
+                    return false;
+                }
+            }
+
+            // Team filter
+            if (teamFilterValue) {
+                const hasTeamPlayer = (teamFilterValue === 'AEK' && match.goalslista?.length) ||
+                                    (teamFilterValue === 'Real' && match.goalslistb?.length);
+                if (!hasTeamPlayer) {
+                    return false;
+                }
+            }
+
+            // Result filter
+            if (resultFilterValue) {
+                const aekWin = match.goalsa > match.goalsb;
+                const realWin = match.goalsb > match.goalsa;
+                const draw = match.goalsa === match.goalsb;
+
+                if ((resultFilterValue === 'aek-win' && !aekWin) ||
+                    (resultFilterValue === 'real-win' && !realWin) ||
+                    (resultFilterValue === 'draw' && !draw)) {
+                    return false;
+                }
+            }
+
+            return true;
+        });
+
+        // Update matches data temporarily for rendering
+        const originalMatches = matchesData.matches;
+        matchesData.matches = filteredMatches;
+        renderMatchesList();
+        matchesData.matches = originalMatches; // Restore original data
+    }
+
+    // Clear filters function
+    function clearFilters() {
+        searchInput.value = '';
+        teamFilter.value = '';
+        resultFilter.value = '';
+        if (originalMatchesData.length) {
+            matchesData.matches = originalMatchesData;
+            renderMatchesList();
+        }
+    }
+
+    // Add event listeners
+    searchInput.addEventListener('input', debouncedSearch);
+    teamFilter.addEventListener('change', applyFilters);
+    resultFilter.addEventListener('change', applyFilters);
+
+    // Add clear button functionality (if ESC key is pressed in search)
+    searchInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            clearFilters();
+        }
+    });
 }
 
 let matchViewDate = new Date().toISOString().slice(0, 10); // Standard: heute
@@ -1190,6 +1318,31 @@ async function submitMatchForm(event, id) {
         const redb = parseInt(form.redb.value) || 0;
         const manofthematch = form.manofthematch.value || "";
 
+        // Enhanced validation
+        if (!date) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
+            document.getElementById('match-save-indicator')?.remove();
+            ErrorHandler.showUserError('Bitte wählen Sie ein Spieldatum aus.', 'warning');
+            return;
+        }
+
+        if (isNaN(goalsa) || isNaN(goalsb) || goalsa < 0 || goalsb < 0) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
+            document.getElementById('match-save-indicator')?.remove();
+            ErrorHandler.showUserError('Bitte geben Sie gültige Toranzahlen ein (0 oder höher).', 'warning');
+            return;
+        }
+
+        if (goalsa > 50 || goalsb > 50) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
+            document.getElementById('match-save-indicator')?.remove();
+            ErrorHandler.showUserError('Die Toranzahl darf maximal 50 betragen.', 'warning');
+            return;
+        }
+
     function getScorers(group, name) {
         return Array.from(group.querySelectorAll('.scorer-row')).map(d => ({
             player: d.querySelector(`select[name="${name}-player"]`).value,
@@ -1204,14 +1357,18 @@ async function submitMatchForm(event, id) {
         goalslista = getScorers(groupA, "goalslista");
         const sumA = goalslista.reduce((sum, g) => sum + (g.count || 0), 0);
         if (sumA > goalsa) {
-            alert(`Die Summe der Torschützen-Tore für ${teama} (${sumA}) darf nicht größer als die Gesamtanzahl der Tore (${goalsa}) sein!`);
-            // Restore button state and remove indicator
+            // Restore button state and remove indicator first
             submitBtn.disabled = false;
             submitBtn.textContent = originalText;
             const saveIndicator = document.getElementById('match-save-indicator');
             if (saveIndicator && saveIndicator.parentNode) {
                 saveIndicator.parentNode.removeChild(saveIndicator);
             }
+            
+            ErrorHandler.showUserError(
+                `Die Summe der Torschützen-Tore für ${teama} (${sumA}) darf nicht größer als die Gesamtanzahl der Tore (${goalsa}) sein!`,
+                'warning'
+            );
             return;
         }
     }
@@ -1220,9 +1377,20 @@ async function submitMatchForm(event, id) {
         goalslistb = getScorers(groupB, "goalslistb");
         const sumB = goalslistb.reduce((sum, g) => sum + (g.count || 0), 0);
         if (sumB > goalsb) {
-            alert(`Die Summe der Torschützen-Tore für ${teamb} (${sumB}) darf nicht größer als die Gesamtanzahl der Tore (${goalsb}) sein!`);
-            // Restore button state and remove indicator
+            // Restore button state and remove indicator first
             submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
+            const saveIndicator = document.getElementById('match-save-indicator');
+            if (saveIndicator && saveIndicator.parentNode) {
+                saveIndicator.parentNode.removeChild(saveIndicator);
+            }
+            
+            ErrorHandler.showUserError(
+                `Die Summe der Torschützen-Tore für ${teamb} (${sumB}) darf nicht größer als die Gesamtanzahl der Tore (${goalsb}) sein!`,
+                'warning'
+            );
+            return;
+        }
             submitBtn.textContent = originalText;
             const saveIndicator = document.getElementById('match-save-indicator');
             if (saveIndicator && saveIndicator.parentNode) {
