@@ -345,7 +345,7 @@ function matchHtml(match, nr) {
     };
     
     return `
-    <div class="bg-white border border-gray-300 rounded-xl p-4 mb-3 text-gray-900 shadow-lg hover:shadow-xl transition-all duration-200 ${resultClass}">
+    <div class="bg-white border border-gray-300 rounded-xl p-4 mb-3 text-gray-900 shadow-lg hover:shadow-xl transition-all duration-200 ${getResultClass()}">
       <!-- Match Header with Toggle -->
       <div class="flex justify-between items-start mb-3">
         <div class="flex-1">
