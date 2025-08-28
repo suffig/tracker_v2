@@ -308,42 +308,41 @@ function attachMatchEventListeners(uniqueDates) {
 }
 
 function matchHtml(match, nr) {
-    function goalsHtml(goals) {
+    // Optimized goal rendering with better performance
+    const goalsHtml = (goals) => {
         if (!goals || !goals.length) return `<span class="text-gray-600 text-sm italic">Keine Torschützen</span>`;
-        return goals
-            .map(g => {
-                // Handle both string array format (legacy) and object format (new)
-                if (typeof g === 'string') {
-                    return `<span class="inline-flex items-center gap-2 bg-gradient-to-r from-green-600 to-green-500 text-green-100 rounded-lg px-3 py-1 text-sm font-medium shadow-md">
-                        ${g} 
-                        <span class="inline-block rounded-md px-2 py-1 border font-bold text-xs bg-green-700 border-green-600 text-green-100">1</span>
-                    </span>`;
-                } else {
-                    return `<span class="inline-flex items-center gap-2 bg-gradient-to-r from-green-600 to-green-500 text-green-100 rounded-lg px-3 py-1 text-sm font-medium shadow-md">
-                        ${g.player} 
-                        <span class="inline-block rounded-md px-2 py-1 border font-bold text-xs bg-green-700 border-green-600 text-green-100">${g.count}</span>
-                    </span>`;
-                }
-            })
-            .join(' ');
-    }
+        
+        return goals.map(g => {
+            // Handle both string array format (legacy) and object format (new)
+            const player = typeof g === 'string' ? g : g.player;
+            const count = typeof g === 'string' ? 1 : (g.count || 1);
+            
+            return `<span class="inline-flex items-center gap-2 bg-gradient-to-r from-green-600 to-green-500 text-green-100 rounded-lg px-3 py-1 text-sm font-medium shadow-md">
+                ${player} 
+                <span class="inline-block rounded-md px-2 py-1 border font-bold text-xs bg-green-700 border-green-600 text-green-100">${count}</span>
+            </span>`;
+        }).join(' ');
+    };
     
-    function prizeHtml(amount, team) {
+    // Optimized prize HTML generation
+    const prizeHtml = (amount, team) => {
         const isPos = amount >= 0;
         const tClass = team === "AEK" ? "bg-blue-200 border-2 border-blue-600" : "bg-red-200 border-2 border-red-600";
         const color = isPos ? "text-green-800" : "text-red-800";
         const teamTextColor = team === "AEK" ? "text-blue-900" : "text-red-900";
+        
         return `<span class="inline-flex items-center gap-2 px-3 py-2 rounded-full ${tClass} font-bold text-sm shadow-lg">
-                    <span class="font-bold ${teamTextColor}">${team}</span>
-                    <span class="${color} font-extrabold">${isPos ? '+' : ''}${amount.toLocaleString('de-DE')} €</span>
-                </span>`;
-    }
+            <span class="font-bold ${teamTextColor}">${team}</span>
+            <span class="${color} font-extrabold">${isPos ? '+' : ''}${amount.toLocaleString('de-DE')} €</span>
+        </span>`;
+    };
     
     // Determine match result for better visual indication
-    const isWin = match.goalsa > match.goalsb ? 'AEK' : match.goalsa < match.goalsb ? 'Real' : 'Draw';
-    const resultClass = isWin === 'AEK' ? 'border-l-4 border-l-blue-500' : 
-                        isWin === 'Real' ? 'border-l-4 border-l-red-500' : 
-                        'border-l-4 border-l-gray-500';
+    const getResultClass = () => {
+        if (match.goalsa > match.goalsb) return 'border-l-4 border-l-blue-500';
+        if (match.goalsa < match.goalsb) return 'border-l-4 border-l-red-500';
+        return 'border-l-4 border-l-gray-500';
+    };
     
     return `
     <div class="bg-white border border-gray-300 rounded-xl p-4 mb-3 text-gray-900 shadow-lg hover:shadow-xl transition-all duration-200 ${resultClass}">

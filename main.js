@@ -2,6 +2,7 @@ import { supabase, supabaseDb, usingFallback } from './supabaseClient.js';
 import { connectionMonitor, isDatabaseAvailable } from './connectionMonitor.js';
 import { dataManager } from './dataManager.js';
 import { loadingManager, ErrorHandler, eventBus } from './utils.js';
+import { showModal, hideModal } from './modal.js';
 
 import { signUp, signIn, signOut } from './auth.js';
 import { renderKaderTab } from './kader.js';
@@ -99,7 +100,7 @@ function updateConnectionStatus(status) {
     indicator.dataset.status = JSON.stringify(status);
 }
 
-// Show detailed connection information in a modal
+// Enhanced connection details modal with improved UX
 function showConnectionDetails() {
     const indicator = document.getElementById('connection-status');
     if (!indicator || !indicator.dataset.status) return;
@@ -108,86 +109,78 @@ function showConnectionDetails() {
         const status = JSON.parse(indicator.dataset.status);
         const diagnostics = connectionMonitor.getDiagnostics();
         
-        // Create modal HTML
         const modalHTML = `
-            <div class="modal" id="connection-details-modal">
-                <div class="modal-content">
-                    <div class="flex justify-between items-center mb-4">
-                        <h3 class="text-lg font-semibold text-gray-100">Verbindungsstatus</h3>
-                        <button onclick="closeConnectionDetails()" class="text-gray-500 hover:text-gray-700">✕</button>
+            <div class="p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-semibold">Verbindungsstatus</h3>
+                    <button onclick="hideModal()" class="text-gray-500 hover:text-gray-700 text-xl">×</button>
+                </div>
+                
+                <div class="space-y-4">
+                    <!-- Connection Status -->
+                    <div class="modern-card">
+                        <div class="flex items-center justify-between">
+                            <span class="font-medium">Status:</span>
+                            <span class="px-2 py-1 rounded text-sm ${status.connected ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                                ${status.connected ? '✅ Verbunden' : '❌ Getrennt'}
+                            </span>
+                        </div>
+                        <div class="flex items-center justify-between mt-2">
+                            <span class="font-medium">Typ:</span>
+                            <span class="text-sm text-gray-600">${getConnectionTypeText(diagnostics.connectionType)}</span>
+                        </div>
                     </div>
                     
-                    <div class="space-y-4">
-                        <!-- Connection Status -->
-                        <div class="bg-gray-700 p-3 rounded-lg">
-                            <div class="flex items-center justify-between">
-                                <span class="font-medium">Status:</span>
-                                <span class="px-2 py-1 rounded text-sm ${status.connected ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200' : 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'}">
-                                    ${status.connected ? '✅ Verbunden' : '❌ Getrennt'}
-                                </span>
-                            </div>
-                            <div class="flex items-center justify-between mt-2">
-                                <span class="font-medium">Typ:</span>
-                                <span class="text-sm text-gray-600">${getConnectionTypeText(diagnostics.connectionType)}</span>
+                    ${status.message ? `
+                        <div class="notification warning">
+                            <div class="notification-icon">!</div>
+                            <div class="notification-content">
+                                <div class="notification-title">Nachricht</div>
+                                <div class="notification-message">${status.message}</div>
                             </div>
                         </div>
-                        
-                        <!-- Error Message -->
-                        ${status.message ? `
-                            <div class="bg-yellow-50 border border-yellow-200 p-3 rounded-lg">
-                                <div class="font-medium text-yellow-800">Nachricht:</div>
-                                <div class="text-sm text-yellow-700">${status.message}</div>
+                    ` : ''}
+                    
+                    ${diagnostics.metrics.totalConnections > 0 ? `
+                        <div class="modern-card">
+                            <div class="font-medium mb-2">Verbindungsstatistiken:</div>
+                            <div class="text-sm space-y-1">
+                                <div>Erfolgsrate: ${diagnostics.metrics.successRate}%</div>
+                                <div>Durchschnittliche Antwortzeit: ${Math.round(diagnostics.metrics.averageResponseTime)}ms</div>
+                                <div>Letzte Antwortzeit: ${Math.round(diagnostics.metrics.lastResponseTime)}ms</div>
+                                <div>Verbindungsgeschwindigkeit: ${getSpeedText(diagnostics.connectionSpeed)}</div>
                             </div>
-                        ` : ''}
-                        
-                        <!-- Metrics -->
-                        ${diagnostics.metrics.totalConnections > 0 ? `
-                            <div class="bg-blue-50 p-3 rounded-lg">
-                                <div class="font-medium text-blue-800 mb-2">Verbindungsstatistiken:</div>
-                                <div class="text-sm text-blue-700 space-y-1">
-                                    <div>Erfolgsrate: ${diagnostics.metrics.successRate}%</div>
-                                    <div>Durchschnittliche Antwortzeit: ${Math.round(diagnostics.metrics.averageResponseTime)}ms</div>
-                                    <div>Letzte Antwortzeit: ${Math.round(diagnostics.metrics.lastResponseTime)}ms</div>
-                                    <div>Verbindungsgeschwindigkeit: ${getSpeedText(diagnostics.connectionSpeed)}</div>
-                                </div>
-                            </div>
-                        ` : ''}
-                        
-                        <!-- Recommendations -->
-                        ${diagnostics.recommendations.length > 0 ? `
-                            <div class="bg-indigo-50 p-3 rounded-lg">
-                                <div class="font-medium text-indigo-800 mb-2">Empfehlungen:</div>
-                                <ul class="text-sm text-indigo-700 space-y-1">
-                                    ${diagnostics.recommendations.map(rec => `<li>• ${rec}</li>`).join('')}
-                                </ul>
-                            </div>
-                        ` : ''}
-                        
-                        <!-- Actions -->
-                        <div class="flex space-x-2 pt-2">
-                            <button onclick="testConnection()" class="flex-1 bg-blue-500 text-white px-3 py-2 rounded text-sm hover:bg-blue-600">
-                                🔄 Verbindung testen
-                            </button>
-                            <button onclick="retryConnection()" class="flex-1 bg-green-500 text-white px-3 py-2 rounded text-sm hover:bg-green-600">
-                                🔌 Neu verbinden
-                            </button>
                         </div>
+                    ` : ''}
+                    
+                    ${diagnostics.recommendations.length > 0 ? `
+                        <div class="modern-card">
+                            <div class="font-medium mb-2">Empfehlungen:</div>
+                            <ul class="text-sm space-y-1">
+                                ${diagnostics.recommendations.map(rec => `<li>• ${rec}</li>`).join('')}
+                            </ul>
+                        </div>
+                    ` : ''}
+                    
+                    <!-- Actions -->
+                    <div class="flex space-x-2 pt-2">
+                        <button onclick="testConnection()" class="btn btn-primary btn-sm flex-1">
+                            🔄 Verbindung testen
+                        </button>
+                        <button onclick="retryConnection()" class="btn btn-secondary btn-sm flex-1">
+                            🔌 Neu verbinden
+                        </button>
                     </div>
                 </div>
             </div>
         `;
         
-        // Remove existing modal
-        const existingModal = document.getElementById('connection-details-modal');
-        if (existingModal) {
-            existingModal.remove();
-        }
-        
-        // Add new modal
-        document.body.insertAdjacentHTML('beforeend', modalHTML);
+        // Use enhanced modal system
+        showModal(modalHTML, { size: 'md' });
         
     } catch (error) {
         console.error('Error showing connection details:', error);
+        ErrorHandler.showUserError('Fehler beim Anzeigen der Verbindungsdetails');
     }
 }
 

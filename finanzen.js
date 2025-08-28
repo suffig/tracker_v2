@@ -1,7 +1,7 @@
 import { showModal, hideModal, showSuccessAndCloseModal } from './modal.js';
 import { supabase } from './supabaseClient.js';
 import { matches } from './matches.js';
-import { ErrorHandler } from './utils.js';
+import { ErrorHandler, loadingManager } from './utils.js';
 
 let finances = {
     aekAthen: { balance: 0, debt: 0 },
@@ -9,31 +9,51 @@ let finances = {
 };
 let transactions = [];
 
-// Lädt alle Finanzen und Transaktionen und ruft das Rendern auf
+// Enhanced data loading with better error handling
 async function loadFinancesAndTransactions(renderFn = renderFinanzenTabInner) {
-    const { data: finData, error: finError } = await supabase.from('finances').select('*');
-    if (finError) {
-        ErrorHandler.showUserError(`Fehler beim Laden der Finanzen: ${finError.message}`, "error");
-    }
-    if (finData && finData.length) {
-        finances = {
-            aekAthen: finData.find(f => f.team === "AEK") || { balance: 0, debt: 0 },
-            realMadrid: finData.find(f => f.team === "Real") || { balance: 0, debt: 0 }
-        };
-    } else {
+    const loadingKey = 'finances-data';
+    loadingManager.show(loadingKey);
+
+    try {
+        const [finResult, transResult] = await Promise.allSettled([
+            supabase.from('finances').select('*'),
+            supabase.from('transactions').select('*').order('id', { ascending: false })
+        ]);
+
+        // Process finances data
+        if (finResult.status === 'fulfilled' && finResult.value.data) {
+            const finData = finResult.value.data;
+            finances = {
+                aekAthen: finData.find(f => f.team === "AEK") || { balance: 0, debt: 0 },
+                realMadrid: finData.find(f => f.team === "Real") || { balance: 0, debt: 0 }
+            };
+        } else {
+            finances = {
+                aekAthen: { balance: 0, debt: 0 },
+                realMadrid: { balance: 0, debt: 0 }
+            };
+        }
+
+        // Process transactions data
+        if (transResult.status === 'fulfilled' && transResult.value.data) {
+            transactions = transResult.value.data;
+        } else {
+            transactions = [];
+        }
+
+        console.log('Loaded transactions:', transactions.length, transactions);
+        renderFn("app");
+    } catch (error) {
+        ErrorHandler.handleDatabaseError(error, 'Finanzen-Daten laden');
+        transactions = [];
         finances = {
             aekAthen: { balance: 0, debt: 0 },
             realMadrid: { balance: 0, debt: 0 }
         };
+        renderFn("app");
+    } finally {
+        loadingManager.hide(loadingKey);
     }
-
-    const { data: transData, error: transError } = await supabase.from('transactions').select('*').order('id', { ascending: false });
-    if (transError) {
-        ErrorHandler.showUserError(`Fehler beim Laden der Transaktionen: ${transError.message}`, "error");
-    }
-    transactions = transData || [];
-    console.log('Loaded transactions:', transactions.length, transactions);
-    renderFn("app");
 }
 
 // Transaktion in die DB schreiben und Finanzen aktualisieren
