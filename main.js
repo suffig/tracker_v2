@@ -1,7 +1,7 @@
 import { supabase, supabaseDb, usingFallback } from './supabaseClient.js';
 import { connectionMonitor, isDatabaseAvailable } from './connectionMonitor.js';
 import { dataManager } from './dataManager.js';
-import { loadingManager, ErrorHandler, eventBus } from './utils.js';
+import { loadingManager, ErrorHandler, eventBus, FormValidator } from './utils.js';
 
 import { signUp, signIn, signOut } from './auth.js';
 import { renderKaderTab } from './kader.js';
@@ -421,6 +421,20 @@ async function renderCurrentTab() {
         const renderer = tabRenderers[currentTab];
         if (renderer) {
             await renderer();
+            
+            // Add fade-in animation to new content
+            const appContent = appDiv.firstElementChild;
+            if (appContent) {
+                appContent.style.opacity = '0';
+                appContent.style.transform = 'translateY(10px)';
+                appContent.style.transition = 'opacity 300ms ease-out, transform 300ms ease-out';
+                
+                // Trigger animation after a brief delay
+                requestAnimationFrame(() => {
+                    appContent.style.opacity = '1';
+                    appContent.style.transform = 'translateY(0)';
+                });
+            }
         } else {
             console.warn(`No renderer found for tab: ${currentTab}`);
             appDiv.innerHTML = `<div class="text-yellow-700 text-center py-6">Unbekannter Tab: ${currentTab}</div>`;
