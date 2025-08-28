@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>FIFA Statistik-Tracker</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#475569">
+    <meta name="description" content="Verfolge FIFA-Spiele, Spieler, Sperren und Finanzen">
+    <link rel="manifest" href="./manifest.json">
+
+    <!-- iOS PWA Meta Tags -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="FIFA Tracker">
+    
+    <!-- iOS App Icons -->
+    <link rel="apple-touch-icon" href="./assets/icon-180.png">
+    <link rel="apple-touch-icon-precomposed" href="./assets/icon-180.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="./assets/icon-180.png">
+    <link rel="apple-touch-icon" sizes="152x152" href="./assets/icon-180.png">
+    <link rel="apple-touch-icon" sizes="144x144" href="./assets/icon-180.png">
+    <link rel="apple-touch-icon" sizes="120x120" href="./assets/icon-180.png">
+    <link rel="apple-touch-icon" sizes="114x114" href="./assets/icon-180.png">
+    <link rel="apple-touch-icon" sizes="76x76" href="./assets/icon-180.png">
+    <link rel="apple-touch-icon" sizes="72x72" href="./assets/icon-180.png">
+    <link rel="apple-touch-icon" sizes="60x60" href="./assets/icon-180.png">
+    <link rel="apple-touch-icon" sizes="57x57" href="./assets/icon-180.png">
+    
+    <link rel="apple-touch-startup-image" href="./assets/logo.png">
+
+    <!-- Windows PWA Meta Tags -->
+    <meta name="msapplication-TileColor" content="#475569">
+    <meta name="msapplication-TileImage" content="./assets/logo.png">
+
+    <!-- Standard favicon -->
+    <link rel="icon" type="image/png" href="./assets/logo.png">
+    <!-- Inter Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Original Tailwind CSS -->
+    <link href="css/tailwind-play-output.css" rel="stylesheet">
+    <!-- New Modern Design -->
+    <link href="css/new-design.css" rel="stylesheet">
+    <!-- Flowbite CSS - Local Minimal Replacement -->
+    <link href="assets/flowbite-minimal.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/flowbite/2.3.0/flowbite.min.js"></script>
+    <!-- Mobile menu functionality -->
+    <script src="assets/mobile-menu.js"></script>
+    <!-- Font Awesome - Local Replacement -->
+    <link rel="stylesheet" href="assets/fonts/fontawesome-icons.css">
+    <!-- Supabase JavaScript Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="modern-theme">
+<!-- LOGIN AREA - NEW DESIGN -->
+<div id="login-area"></div>
+
+<!-- MAIN APP - NEW DESIGN -->
+<div class="app-container modern-design" style="display:none;">
+    <!-- Header removed as per requirement #4 -->
+
+    <!-- MODERN BOTTOM NAVIGATION -->
+    <nav class="modern-bottom-nav">
+      <div class="nav-container">
+        <a id="nav-matches" href="#" class="nav-item active">
+          <i class="fas fa-futbol nav-icon"></i>
+          <span class="nav-label">Spiele</span>
+        </a>
+        <a id="nav-squad" href="#" class="nav-item">
+          <i class="fas fa-users nav-icon"></i>
+          <span class="nav-label">Kader</span>
+        </a>
+        <a id="nav-bans" href="#" class="nav-item">
+          <i class="fas fa-ban nav-icon"></i>
+          <span class="nav-label">Sperren</span>
+        </a>
+        <a id="nav-finanzen" href="#" class="nav-item">
+          <i class="fas fa-euro-sign nav-icon"></i>
+          <span class="nav-label">Finanzen</span>
+        </a>
+        <a id="nav-stats" href="#" class="nav-item">
+          <i class="fas fa-chart-bar nav-icon"></i>
+          <span class="nav-label">Stats</span>
+        </a>
+        <a id="nav-spieler" href="#" class="nav-item">
+          <i class="fas fa-star nav-icon"></i>
+          <span class="nav-label">Spieler</span>
+        </a>
+        <button id="logout-btn" class="nav-item logout-nav" title="Abmelden">
+          <i class="fas fa-sign-out-alt nav-icon"></i>
+          <span class="nav-label">Logout</span>
+        </button>
+      </div>
+    </nav>
+
+    <!-- MAIN CONTENT -->
+    <main class="page-container">
+        <!-- Enhanced loader -->
+        <div id="tab-loader" class="fixed top-0 left-0 w-full h-full bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50" style="display:none;">
+            <div class="bg-white rounded-xl p-6 flex flex-col items-center gap-4 shadow-xl">
+                <div class="spinner"></div>
+                <div class="text-gray-600 font-medium">Lädt...</div>
+            </div>
+        </div>
+        <div id="app"></div>
+    </main>
+</div>
+
+<!-- MODAL ROOT -->
+<div id="modal-root"></div>
+
+<script type="module" src="./main.js"></script>
+</body>
+</html>
