@@ -436,3 +436,181 @@ export class EventEmitter {
 }
 
 export const eventBus = new EventEmitter();
+
+// Additional utility functions for common tasks
+export const CommonUtils = {
+    /**
+     * Generate HTML for a form field with validation
+     */
+    createFormField(config) {
+        const {
+            type = 'text',
+            name,
+            label,
+            placeholder = '',
+            value = '',
+            required = false,
+            validation = null,
+            helpText = '',
+            options = [] // for select fields
+        } = config;
+
+        const requiredAttr = required ? 'required' : '';
+        const fieldId = `field-${name}`;
+        
+        let inputHtml = '';
+        if (type === 'select') {
+            const optionsHtml = options.map(opt => 
+                `<option value="${opt.value}" ${opt.value === value ? 'selected' : ''}>${opt.label}</option>`
+            ).join('');
+            inputHtml = `<select id="${fieldId}" name="${name}" class="form-input" ${requiredAttr}>${optionsHtml}</select>`;
+        } else {
+            inputHtml = `<input type="${type}" id="${fieldId}" name="${name}" class="form-input" placeholder="${placeholder}" value="${value}" ${requiredAttr}>`;
+        }
+
+        return `
+            <div class="form-group">
+                <label for="${fieldId}" class="form-label">${label}${required ? ' *' : ''}</label>
+                ${inputHtml}
+                ${helpText ? `<small class="form-help">${helpText}</small>` : ''}
+            </div>
+        `;
+    },
+
+    /**
+     * Create a standardized data table
+     */
+    createDataTable(config) {
+        const { headers, data, actions = [], emptyMessage = 'Keine Daten verfügbar' } = config;
+        
+        if (!data || data.length === 0) {
+            return `<div class="text-center py-8 text-gray-500">${emptyMessage}</div>`;
+        }
+
+        const headerHtml = headers.map(h => `<th class="table-header">${h.label}</th>`).join('');
+        const actionHeaderHtml = actions.length > 0 ? '<th class="table-header">Aktionen</th>' : '';
+        
+        const rowsHtml = data.map(row => {
+            const cellsHtml = headers.map(h => {
+                const value = this.getNestedValue(row, h.key);
+                const formatted = h.formatter ? h.formatter(value, row) : value;
+                return `<td class="table-cell">${formatted}</td>`;
+            }).join('');
+            
+            const actionsHtml = actions.length > 0 ? `
+                <td class="table-cell">
+                    <div class="flex gap-2">
+                        ${actions.map(action => `
+                            <button class="btn btn-sm ${action.variant || 'btn-secondary'}" 
+                                    onclick="${action.onClick}('${row.id || row.name}')"
+                                    title="${action.tooltip || action.label}">
+                                ${action.icon ? `<i class="${action.icon}"></i>` : action.label}
+                            </button>
+                        `).join('')}
+                    </div>
+                </td>
+            ` : '';
+            
+            return `<tr class="table-row">${cellsHtml}${actionsHtml}</tr>`;
+        }).join('');
+
+        return `
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>${headerHtml}${actionHeaderHtml}</tr>
+                    </thead>
+                    <tbody>
+                        ${rowsHtml}
+                    </tbody>
+                </table>
+            </div>
+        `;
+    },
+
+    /**
+     * Get nested object value by dot notation
+     */
+    getNestedValue(obj, path) {
+        return path.split('.').reduce((current, key) => current?.[key], obj);
+    },
+
+    /**
+     * Create a statistics card component
+     */
+    createStatsCard(config) {
+        const { title, value, subtitle, icon, color = 'blue', trend = null } = config;
+        
+        const trendHtml = trend ? `
+            <div class="flex items-center text-sm ${trend.positive ? 'text-green-600' : 'text-red-600'}">
+                <i class="fas fa-arrow-${trend.positive ? 'up' : 'down'} mr-1"></i>
+                ${trend.value}
+            </div>
+        ` : '';
+
+        return `
+            <div class="stats-card stats-card-${color}">
+                <div class="stats-card-content">
+                    <div class="stats-card-header">
+                        ${icon ? `<div class="stats-card-icon"><i class="${icon}"></i></div>` : ''}
+                        <div class="stats-card-title">${title}</div>
+                    </div>
+                    <div class="stats-card-value">${value}</div>
+                    ${subtitle ? `<div class="stats-card-subtitle">${subtitle}</div>` : ''}
+                    ${trendHtml}
+                </div>
+            </div>
+        `;
+    },
+
+    /**
+     * Format currency values
+     */
+    formatCurrency(amount, currency = '€') {
+        const formatter = new Intl.NumberFormat('de-DE', {
+            style: 'decimal',
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 2
+        });
+        
+        const sign = amount >= 0 ? '+' : '';
+        return `${sign}${formatter.format(amount)}${currency}`;
+    },
+
+    /**
+     * Format large numbers with abbreviations
+     */
+    formatNumber(num, precision = 1) {
+        const map = [
+            { suffix: 'T', threshold: 1e12 },
+            { suffix: 'B', threshold: 1e9 },
+            { suffix: 'M', threshold: 1e6 },
+            { suffix: 'K', threshold: 1e3 },
+            { suffix: '', threshold: 1 },
+        ];
+
+        const found = map.find((x) => Math.abs(num) >= x.threshold);
+        if (found) {
+            const formatted = (num / found.threshold).toFixed(precision) + found.suffix;
+            return formatted;
+        }
+
+        return num.toString();
+    },
+
+    /**
+     * Capitalize first letter of each word
+     */
+    capitalize(str) {
+        return str.replace(/\w\S*/g, (txt) => 
+            txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase()
+        );
+    },
+
+    /**
+     * Generate a unique ID
+     */
+    generateId(prefix = 'id') {
+        return `${prefix}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    }
+};
