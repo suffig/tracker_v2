@@ -54,6 +54,9 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body class="modern-theme">
+<!-- Skip link for accessibility -->
+<a href="#main-content" class="skip-link">Zum Hauptinhalt springen</a>
+
 <!-- LOGIN AREA - NEW DESIGN -->
 <div id="login-area"></div>
 
@@ -62,7 +65,7 @@
     <!-- Header removed as per requirement #4 -->
 
     <!-- MODERN BOTTOM NAVIGATION -->
-    <nav class="modern-bottom-nav">
+    <nav class="modern-bottom-nav" role="navigation" aria-label="Hauptnavigation">
       <div class="nav-container">
         <a id="nav-matches" href="#" class="nav-item active">
           <i class="fas fa-futbol nav-icon"></i>
@@ -96,15 +99,15 @@
     </nav>
 
     <!-- MAIN CONTENT -->
-    <main class="page-container">
+    <main id="main-content" class="page-container" role="main">
         <!-- Enhanced loader -->
-        <div id="tab-loader" class="fixed top-0 left-0 w-full h-full bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50" style="display:none;">
+        <div id="tab-loader" class="fixed top-0 left-0 w-full h-full bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50" style="display:none;" aria-hidden="true">
             <div class="bg-white rounded-xl p-6 flex flex-col items-center gap-4 shadow-xl">
                 <div class="spinner"></div>
                 <div class="text-gray-600 font-medium">Lädt...</div>
             </div>
         </div>
-        <div id="app"></div>
+        <div id="app" role="region" aria-live="polite"></div>
     </main>
 </div>
 
