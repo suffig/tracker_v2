@@ -2,7 +2,7 @@ import { POSITIONEN, savePlayer as dataSavePlayer, deletePlayer as dataDeletePla
 import { showModal, hideModal, showSuccessAndCloseModal } from './modal.js';
 import { supabaseDb, supabase } from './supabaseClient.js';
 import { isDatabaseAvailable } from './connectionMonitor.js';
-import { ErrorHandler } from './utils.js';
+import { ErrorHandler, loadingManager } from './utils.js';
 
 let aekAthen = [];
 let realMadrid = [];
@@ -30,13 +30,12 @@ function getPositionBadgeClass(pos) {
     return "position-badge bg-gray-700 text-gray-200 border-gray-600";
 }
 
+// Enhanced data loading with better error handling and performance
 async function loadPlayersAndFinances(renderFn = renderPlayerLists) {
-    try {
-        const loadingDiv = document.createElement('div');
-        loadingDiv.innerHTML = '<div class="text-center py-4"><i class="fas fa-spinner fa-spin"></i> Lade Daten...</div>';
-        const appDiv = document.getElementById('app');
-        if (appDiv) appDiv.appendChild(loadingDiv);
+    const loadingKey = 'kader-data';
+    loadingManager.show(loadingKey);
 
+    try {
         const [playersResult, finResult, transResult] = await Promise.allSettled([
             supabaseDb.select('players', '*'),
             supabaseDb.select('finances', '*'),
@@ -45,12 +44,15 @@ async function loadPlayersAndFinances(renderFn = renderPlayerLists) {
             })
         ]);
 
+        // Process players data
         if (playersResult.status === 'fulfilled' && playersResult.value.data) {
             const players = playersResult.value.data;
             aekAthen = players.filter(p => p.team === "AEK");
             realMadrid = players.filter(p => p.team === "Real");
             ehemalige = players.filter(p => p.team === "Ehemalige");
         }
+
+        // Process finances data
         if (finResult.status === 'fulfilled' && finResult.value.data) {
             const finData = finResult.value.data;
             finances = {
@@ -58,28 +60,17 @@ async function loadPlayersAndFinances(renderFn = renderPlayerLists) {
                 realMadrid: finData.find(f => f.team === "Real") || { balance: 0 }
             };
         }
+
+        // Process transactions data
         if (transResult.status === 'fulfilled' && transResult.value.data) {
             transactions = transResult.value.data;
         }
 
-        if (loadingDiv.parentNode) {
-            loadingDiv.parentNode.removeChild(loadingDiv);
-        }
-
         renderFn();
     } catch (error) {
-        console.error('Error loading data:', error);
-        const errorDiv = document.createElement('div');
-        errorDiv.innerHTML = `
-            <div class="bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-600 text-red-700 dark:text-red-200 px-4 py-3 rounded mb-4">
-                <strong>Fehler beim Laden der Daten.</strong> 
-                ${isDatabaseAvailable() ? 'Bitte versuchen Sie es erneut.' : 'Keine Datenbankverbindung.'}
-                <button onclick="this.parentElement.remove()" class="float-right font-bold text-red-700 dark:text-red-200 hover:text-red-900 dark:hover:text-red-100">×</button>
-            </div>
-        `;
-        const appDiv = document.getElementById('app');
-        if (appDiv) appDiv.insertBefore(errorDiv, appDiv.firstChild);
-        renderFn();
+        ErrorHandler.handleDatabaseError(error, 'Kader-Daten laden');
+    } finally {
+        loadingManager.hide(loadingKey);
     }
 }
 
