@@ -130,7 +130,7 @@ export class LoadingManager {
         indicator.className = 'flex items-center justify-center py-4';
         indicator.innerHTML = `
             <div class="flex items-center space-x-2">
-                <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                <div class="spinner"></div>
                 <span class="text-sm text-gray-600">${message}</span>
             </div>
         `;
@@ -262,77 +262,40 @@ export class ErrorHandler {
     }
 }
 
-// Form Validation Utilities
-export const FormValidator = {
-    validateRequired(value, fieldName) {
-        if (!value || value.toString().trim() === '') {
-            throw new Error(`${fieldName} ist erforderlich`);
-        }
-        return true;
-    },
+// Enhanced Performance Utilities
+export class Performance {
+    static cache = new Map();
+    static observers = new Map();
 
-    validateEmail(email) {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(email)) {
-            throw new Error('Ungültige E-Mail-Adresse');
-        }
-        return true;
-    },
-
-    validateNumber(value, fieldName, min = null, max = null) {
-        const num = parseFloat(value);
-        if (isNaN(num)) {
-            throw new Error(`${fieldName} muss eine gültige Zahl sein`);
-        }
-        if (min !== null && num < min) {
-            throw new Error(`${fieldName} muss mindestens ${min} sein`);
-        }
-        if (max !== null && num > max) {
-            throw new Error(`${fieldName} darf maximal ${max} sein`);
-        }
-        return num;
-    },
-
-    validateString(value, fieldName, minLength = 0, maxLength = 255) {
-        if (typeof value !== 'string') {
-            throw new Error(`${fieldName} muss ein Text sein`);
-        }
-        if (value.length < minLength) {
-            throw new Error(`${fieldName} muss mindestens ${minLength} Zeichen haben`);
-        }
-        if (value.length > maxLength) {
-            throw new Error(`${fieldName} darf maximal ${maxLength} Zeichen haben`);
-        }
-        return value.trim();
-    },
-
-    sanitizeInput(value) {
-        if (typeof value !== 'string') return value;
-        
-        return value
-            .trim()
-            .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-            .replace(/[<>]/g, '');
-    }
-};
-
-// Performance Utilities
-export const Performance = {
-    // Simple debounce function
-    debounce(func, wait) {
+    // Debounce function with improved cleanup
+    static debounce(func, wait, immediate = false) {
         let timeout;
-        return function executedFunction(...args) {
+        let result;
+        
+        const debounced = function executedFunction(...args) {
             const later = () => {
-                clearTimeout(timeout);
-                func(...args);
+                timeout = null;
+                if (!immediate) result = func.apply(this, args);
             };
+            
+            const callNow = immediate && !timeout;
             clearTimeout(timeout);
             timeout = setTimeout(later, wait);
+            
+            if (callNow) result = func.apply(this, args);
+            return result;
         };
-    },
 
-    // Simple throttle function  
-    throttle(func, limit) {
+        debounced.cancel = () => {
+            clearTimeout(timeout);
+            timeout = null;
+        };
+
+        return debounced;
+    }
+
+    // Throttle function
+    static throttle(func, limit) {
         let inThrottle;
         return function() {
             const args = arguments;
@@ -343,25 +306,149 @@ export const Performance = {
                 setTimeout(() => inThrottle = false, limit);
             }
         };
-    },
+    }
 
-    // Measure and log performance
-    measurePerformance(operation, name = 'operation') {
-        return async function(...args) {
-            const start = performance.now();
-            try {
-                const result = await operation.apply(this, args);
-                const end = performance.now();
-                console.log(`${name} took ${(end - start).toFixed(2)}ms`);
-                return result;
-            } catch (error) {
-                const end = performance.now();
-                console.error(`${name} failed after ${(end - start).toFixed(2)}ms:`, error);
-                throw error;
+    // Memoization with TTL (Time To Live)
+    static memoize(func, keyGenerator = (...args) => JSON.stringify(args), ttl = 300000) { // 5 minutes default
+        return function(...args) {
+            const key = keyGenerator(...args);
+            const cached = Performance.cache.get(key);
+            
+            if (cached && (Date.now() - cached.timestamp) < ttl) {
+                return cached.value;
             }
+            
+            const result = func.apply(this, args);
+            Performance.cache.set(key, {
+                value: result,
+                timestamp: Date.now()
+            });
+            
+            return result;
         };
     }
-};
+
+    // Clear cache by pattern
+    static clearCache(pattern = null) {
+        if (!pattern) {
+            Performance.cache.clear();
+            return;
+        }
+        
+        for (const [key] of Performance.cache) {
+            if (key.includes(pattern)) {
+                Performance.cache.delete(key);
+            }
+        }
+    }
+
+    // Intersection Observer for lazy loading
+    static observeIntersection(element, callback, options = {}) {
+        const defaultOptions = {
+            root: null,
+            rootMargin: '50px',
+            threshold: 0.1
+        };
+        
+        const observerOptions = { ...defaultOptions, ...options };
+        const observer = new IntersectionObserver(callback, observerOptions);
+        observer.observe(element);
+        
+        const id = Math.random().toString(36).substr(2, 9);
+        Performance.observers.set(id, observer);
+        
+        return () => {
+            observer.unobserve(element);
+            observer.disconnect();
+            Performance.observers.delete(id);
+        };
+    }
+
+    // Measure performance of async operations
+    static async measureAsync(name, operation) {
+        const start = performance.now();
+        try {
+            const result = await operation();
+            const end = performance.now();
+            console.log(`${name} took ${(end - start).toFixed(2)}ms`);
+            return result;
+        } catch (error) {
+            const end = performance.now();
+            console.log(`${name} failed after ${(end - start).toFixed(2)}ms`);
+            throw error;
+        }
+    }
+
+    // Cleanup all performance utilities
+    static cleanup() {
+        Performance.cache.clear();
+        for (const [id, observer] of Performance.observers) {
+            observer.disconnect();
+        }
+        Performance.observers.clear();
+    }
+}
+
+// Enhanced Form Validation Utilities
+export class FormValidator {
+    static rules = {
+        required: (value) => value !== null && value !== undefined && value.toString().trim() !== '',
+        email: (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value),
+        number: (value) => !isNaN(value) && isFinite(value),
+        positiveNumber: (value) => FormValidator.rules.number(value) && Number(value) > 0,
+        minLength: (min) => (value) => value && value.length >= min,
+        maxLength: (max) => (value) => !value || value.length <= max,
+        pattern: (regex) => (value) => !value || regex.test(value)
+    };
+
+    static validate(value, rules) {
+        const errors = [];
+        
+        for (const rule of rules) {
+            if (typeof rule === 'function') {
+                if (!rule(value)) {
+                    errors.push('Ungültiger Wert');
+                }
+            } else if (typeof rule === 'object') {
+                const { type, message, ...params } = rule;
+                const validator = FormValidator.rules[type];
+                
+                if (validator) {
+                    const isValid = Object.keys(params).length > 0
+                        ? validator(Object.values(params)[0])(value)
+                        : validator(value);
+                    
+                    if (!isValid) {
+                        errors.push(message || `Validierung fehlgeschlagen: ${type}`);
+                    }
+                }
+            }
+        }
+        
+        return {
+            valid: errors.length === 0,
+            errors
+        };
+    }
+
+    static validateForm(formData, validationRules) {
+        const results = {};
+        let isFormValid = true;
+        
+        for (const [field, rules] of Object.entries(validationRules)) {
+            const result = FormValidator.validate(formData[field], rules);
+            results[field] = result;
+            if (!result.valid) {
+                isFormValid = false;
+            }
+        }
+        
+        return {
+            valid: isFormValid,
+            fields: results
+        };
+    }
+}
 
 // Date and Time Utilities
 export const DateUtils = {
@@ -392,6 +479,24 @@ export const DateUtils = {
 
     getCurrentDateString() {
         return new Date().toISOString().split('T')[0];
+    },
+
+    formatRelativeTime(dateString) {
+        try {
+            const date = new Date(dateString);
+            const now = new Date();
+            const diffMs = now - date;
+            const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+            
+            if (diffDays === 0) return 'Heute';
+            if (diffDays === 1) return 'Gestern';
+            if (diffDays < 7) return `vor ${diffDays} Tagen`;
+            if (diffDays < 30) return `vor ${Math.floor(diffDays / 7)} Wochen`;
+            return date.toLocaleDateString('de-DE');
+        } catch (error) {
+            console.error('Relative time formatting error:', error);
+            return dateString;
+        }
     }
 };
 
@@ -429,6 +534,10 @@ export class EventEmitter {
                 console.error(`Error in event listener for '${event}':`, error);
             }
         });
+    }
+
+    clear() {
+        this.events = {};
     }
 }
 
