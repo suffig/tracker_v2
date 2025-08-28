@@ -448,6 +448,27 @@ export class FormValidator {
             fields: results
         };
     }
+
+    // Authentication validation methods
+    static validateRequired(value, fieldName) {
+        if (!FormValidator.rules.required(value)) {
+            throw new Error(`${fieldName} ist erforderlich.`);
+        }
+    }
+
+    static validateEmail(value) {
+        if (!FormValidator.rules.email(value)) {
+            throw new Error('Bitte geben Sie eine gültige E-Mail-Adresse ein.');
+        }
+    }
+
+    static sanitizeInput(value) {
+        if (typeof value !== 'string') {
+            return value;
+        }
+        // Basic sanitization: trim whitespace and remove potentially harmful characters
+        return value.trim().replace(/[<>'"]/g, '');
+    }
 }
 
 // Date and Time Utilities
