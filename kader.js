@@ -3,6 +3,7 @@ import { showModal, hideModal, showSuccessAndCloseModal } from './modal.js';
 import { supabaseDb, supabase } from './supabaseClient.js';
 import { isDatabaseAvailable } from './connectionMonitor.js';
 import { ErrorHandler, loadingManager } from './utils.js';
+import { isInReadOnlyMode } from './main.js';
 
 let aekAthen = [];
 let realMadrid = [];
@@ -123,10 +124,12 @@ function accordionPanelHtml(team, key, gradientClass, teamKey) {
             
             ${isOpen ? `
                 <div id="panel-content-${key}" class="border-t border-gray-100 p-4 slide-up">
+                    ${!isInReadOnlyMode() ? `
                     <button id="add-player-${key}" class="btn btn-primary w-full mb-4">
                         <i class="fas fa-plus"></i>
                         <span>Neuen Spieler hinzufügen</span>
                     </button>
+                    ` : ''}
                     <div id="team-${key}-players" class="grid gap-4 ${key === 'ehemalige' ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3' : ''}"></div>
                 </div>
             ` : ''}
@@ -186,6 +189,7 @@ function renderPlayerList(containerId, arr, team) {
                 <p class="text-sm text-gray-500">Team: ${team === 'AEK' ? 'AEK Athen' : team === 'Real' ? 'Real Madrid' : 'Ehemalige'}</p>
                 <p class="text-sm text-gray-500">Marktwert: ${marktwert}M €</p>
             </div>
+            ${!isInReadOnlyMode() ? `
             <div class="card-actions">
                 <button class="btn btn-secondary btn-sm edit-btn">
                     <i class="fas fa-edit"></i>
@@ -196,9 +200,12 @@ function renderPlayerList(containerId, arr, team) {
                     <span>Zu Ehemalige</span>
                 </button>
             </div>
+            ` : ''}
         `;
+        ${!isInReadOnlyMode() ? `
         d.querySelector('.edit-btn').onclick = () => openPlayerForm(team, player.id);
         d.querySelector('.move-btn').onclick = () => movePlayerWithTransaction(player.id, "Ehemalige");
+        ` : ''}
         c.appendChild(d);
     });
 }
@@ -232,6 +239,7 @@ function renderEhemaligeList(containerId = "ehemalige-players") {
                 <p class="text-sm text-gray-500">Status: Ehemaliger Spieler</p>
                 <p class="text-sm text-gray-500">Marktwert: ${marktwert ? marktwert + 'M €' : 'Nicht bewertet'}</p>
             </div>
+            ${!isInReadOnlyMode() ? `
             <div class="card-actions">
                 <button class="btn btn-secondary btn-sm edit-btn">
                     <i class="fas fa-edit"></i>
@@ -250,11 +258,14 @@ function renderEhemaligeList(containerId = "ehemalige-players") {
                     <span>Zu Real</span>
                 </button>
             </div>
+            ` : ''}
         `;
+        ${!isInReadOnlyMode() ? `
         d.querySelector('.edit-btn').onclick = () => openPlayerForm('Ehemalige', player.id);
         d.querySelector('.delete-btn').onclick = () => deletePlayerDb(player.id);
         d.querySelector('.move-aek-btn').onclick = () => movePlayerWithTransaction(player.id, 'AEK');
         d.querySelector('.move-real-btn').onclick = () => movePlayerWithTransaction(player.id, 'Real');
+        ` : ''}
         c.appendChild(d);
     });
 }

@@ -2,6 +2,7 @@ import { showModal, hideModal, showSuccessAndCloseModal } from './modal.js';
 import { supabase } from './supabaseClient.js';
 import { matches } from './matches.js';
 import { ErrorHandler, loadingManager } from './utils.js';
+import { isInReadOnlyMode } from './main.js';
 
 let finances = {
     aekAthen: { balance: 0, debt: 0 },
@@ -96,9 +97,11 @@ function renderFinanzenTabInner(containerId = "app") {
     app.innerHTML = `
         <div class="mb-4 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
             <h2 class="text-lg font-semibold text-slate-100">Finanzen</h2>
+            ${!isInReadOnlyMode() ? `
             <button id="add-trans-btn" class="bg-green-600 hover:bg-green-700 text-white px-2 py-2 rounded-lg text-sm flex items-center justify-center font-semibold transition shadow w-8 h-8">
                 <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/></svg>
             </button>
+            ` : ''}
         </div>
         <div class="flex flex-col sm:flex-row gap-3 mb-6">
             <div class="bg-blue-700 text-blue-100 rounded-lg p-3 flex-1 min-w-0 border border-blue-600 shadow-lg">
@@ -135,7 +138,13 @@ function renderFinanzenTabInner(containerId = "app") {
         </div>
     `;
 
-    document.getElementById("add-trans-btn").onclick = openTransForm;
+    // Only set up add transaction button if not in read-only mode
+    if (!isInReadOnlyMode()) {
+        const addTransBtn = document.getElementById("add-trans-btn");
+        if (addTransBtn) {
+            addTransBtn.onclick = openTransForm;
+        }
+    }
     renderTransactions();
 }
 

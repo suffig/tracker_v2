@@ -27,6 +27,8 @@ let tabButtonsInitialized = false;
 let realtimeChannel = null;
 let isAppVisible = true;
 let inactivityCleanupTimer = null;
+// Global state for read-only mode
+let isReadOnlyMode = false;
 
 console.log("main.js gestartet");
 
@@ -559,6 +561,16 @@ async function renderLoginArea() {
                                     class="form-input" 
                                     value="${pwValue}" />
                             </div>
+                            <div class="form-group">
+                                <label class="flex items-center space-x-2 cursor-pointer">
+                                    <input 
+                                        type="checkbox" 
+                                        id="readOnlyMode" 
+                                        name="readOnlyMode"
+                                        class="form-checkbox text-blue-600 rounded" />
+                                    <span class="form-label mb-0">Nur betrachten (keine Änderungen möglich)</span>
+                                </label>
+                            </div>
                             <button
                                 type="submit"
                                 class="btn btn-primary btn-lg w-full login-btn">
@@ -591,6 +603,7 @@ async function renderLoginArea() {
                     e.preventDefault();
                     const emailInput = document.getElementById('email');
                     const passwordInput = document.getElementById('pw');
+                    const readOnlyCheckbox = document.getElementById('readOnlyMode');
                     const loginBtn = document.querySelector('.login-btn');
                     
                     if (!emailInput || !passwordInput) {
@@ -598,7 +611,9 @@ async function renderLoginArea() {
                         return;
                     }
                     
-                    console.log("🔑 Attempting login with:", emailInput.value);
+                    // Capture read-only mode preference
+                    isReadOnlyMode = readOnlyCheckbox ? readOnlyCheckbox.checked : false;
+                    console.log("🔑 Attempting login with:", emailInput.value, "Read-only mode:", isReadOnlyMode);
                     
                     // Show loading state
                     if (loginBtn) {
@@ -707,6 +722,16 @@ async function showLoginForm() {
                                 class="form-input"
                                 value="${pwValue}" />
                         </div>
+                        <div class="form-group">
+                            <label class="flex items-center space-x-2 cursor-pointer">
+                                <input 
+                                    type="checkbox" 
+                                    id="readOnlyMode" 
+                                    name="readOnlyMode"
+                                    class="form-checkbox text-blue-600 rounded" />
+                                <span class="form-label mb-0">Nur betrachten (keine Änderungen möglich)</span>
+                            </label>
+                        </div>
                         <button
                             type="submit"
                             class="btn btn-primary btn-lg w-full">
@@ -724,8 +749,12 @@ async function showLoginForm() {
                 e.preventDefault();
                 const email = document.getElementById('email').value;
                 const password = document.getElementById('pw').value;
+                const readOnlyCheckbox = document.getElementById('readOnlyMode');
                 
-                console.log(`🔑 Attempting login with: ${email}`);
+                // Capture read-only mode preference
+                isReadOnlyMode = readOnlyCheckbox ? readOnlyCheckbox.checked : false;
+                console.log(`🔑 Attempting login with: ${email}, Read-only mode: ${isReadOnlyMode}`);
+                
                 const submitBtn = form.querySelector('button[type="submit"]');
                 if (submitBtn) {
                     submitBtn.textContent = 'Anmelden...';
@@ -815,6 +844,11 @@ function showDemoModeConfigurationHelp() {
     `;
     
     ErrorHandler.showUserError(helpContent, 'info');
+}
+
+// Export function to get current read-only mode state
+export function isInReadOnlyMode() {
+    return isReadOnlyMode;
 }
 
 document.addEventListener('visibilitychange', handleVisibilityChange);
