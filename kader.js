@@ -1,6 +1,6 @@
 import { POSITIONEN, savePlayer as dataSavePlayer, deletePlayer as dataDeletePlayer } from './data.js';
 import { showModal, hideModal, showSuccessAndCloseModal } from './modal.js';
-import { supabaseDb, supabase } from './supabaseClient.js';
+import { supabaseDb } from './supabaseClient.js';
 import { isDatabaseAvailable } from './connectionMonitor.js';
 import { ErrorHandler, loadingManager } from './utils.js';
 import { isInReadOnlyMode } from './appState.js';

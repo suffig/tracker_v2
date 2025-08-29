@@ -2,7 +2,7 @@ import { showModal, hideModal, showSuccessAndCloseModal } from './modal.js';
 import { decrementBansAfterMatch } from './bans.js';
 import { dataManager } from './dataManager.js';
 import { loadingManager, ErrorHandler, Performance, DOM } from './utils.js';
-import { supabase } from './supabaseClient.js';
+import { supabaseDb } from './supabaseClient.js';
 import { isInReadOnlyMode } from './appState.js';
 
 // Optimized data management with caching
