@@ -103,6 +103,10 @@ export function renderKaderTab(containerId = "app") {
 
 function accordionPanelHtml(team, key, gradientClass, teamKey) {
     const isOpen = openPanel === key;
+    const chevronDirection = isOpen ? 'up' : 'down';
+    const marktwertText = teamKey !== 'Ehemalige' ? `Marktwert: <span id="${key}-marktwert">0M €</span>` : 'Ehemalige Spieler';
+    const gridClasses = key === 'ehemalige' ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3' : '';
+    
     return `
         <div class="modern-card">
             <button id="panel-toggle-${key}" class="flex justify-between items-center w-full p-0 transition-all">
@@ -113,12 +117,12 @@ function accordionPanelHtml(team, key, gradientClass, teamKey) {
                     <div class="text-left">
                         <h3 class="font-semibold text-lg">${team}</h3>
                         <p class="text-sm text-gray-500">
-                            ${teamKey !== 'Ehemalige' ? `Marktwert: <span id="${key}-marktwert">0M €</span>` : 'Ehemalige Spieler'}
+                            ${marktwertText}
                         </p>
                     </div>
                 </div>
                 <div class="p-4">
-                    <i class="fas fa-chevron-${isOpen ? 'up' : 'down'} text-gray-400"></i>
+                    <i class="fas fa-chevron-${chevronDirection} text-gray-400"></i>
                 </div>
             </button>
             
@@ -130,7 +134,7 @@ function accordionPanelHtml(team, key, gradientClass, teamKey) {
                         <span>Neuen Spieler hinzufügen</span>
                     </button>
                     ` : ''}
-                    <div id="team-${key}-players" class="grid gap-4 ${key === 'ehemalige' ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3' : ''}"></div>
+                    <div id="team-${key}-players" class="grid gap-4 ${gridClasses}"></div>
                 </div>
             ` : ''}
         </div>
@@ -202,10 +206,12 @@ function renderPlayerList(containerId, arr, team) {
             </div>
             ` : ''}
         `;
-        ${!isInReadOnlyMode() ? `
-        d.querySelector('.edit-btn').onclick = () => openPlayerForm(team, player.id);
-        d.querySelector('.move-btn').onclick = () => movePlayerWithTransaction(player.id, "Ehemalige");
-        ` : ''}
+        
+        // Add event handlers if not in read-only mode
+        if (!isInReadOnlyMode()) {
+            d.querySelector('.edit-btn').onclick = () => openPlayerForm(team, player.id);
+            d.querySelector('.move-btn').onclick = () => movePlayerWithTransaction(player.id, "Ehemalige");
+        }
         c.appendChild(d);
     });
 }
@@ -260,12 +266,14 @@ function renderEhemaligeList(containerId = "ehemalige-players") {
             </div>
             ` : ''}
         `;
-        ${!isInReadOnlyMode() ? `
-        d.querySelector('.edit-btn').onclick = () => openPlayerForm('Ehemalige', player.id);
-        d.querySelector('.delete-btn').onclick = () => deletePlayerDb(player.id);
-        d.querySelector('.move-aek-btn').onclick = () => movePlayerWithTransaction(player.id, 'AEK');
-        d.querySelector('.move-real-btn').onclick = () => movePlayerWithTransaction(player.id, 'Real');
-        ` : ''}
+        
+        // Add event handlers if not in read-only mode
+        if (!isInReadOnlyMode()) {
+            d.querySelector('.edit-btn').onclick = () => openPlayerForm('Ehemalige', player.id);
+            d.querySelector('.delete-btn').onclick = () => deletePlayerDb(player.id);
+            d.querySelector('.move-aek-btn').onclick = () => movePlayerWithTransaction(player.id, 'AEK');
+            d.querySelector('.move-real-btn').onclick = () => movePlayerWithTransaction(player.id, 'Real');
+        }
         c.appendChild(d);
     });
 }
