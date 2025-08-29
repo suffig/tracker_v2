@@ -9,6 +9,9 @@ let signUp, signIn, signOut;
 let renderKaderTab, renderBansTab, renderMatchesTab, renderStatsTab, renderFinanzenTab, renderSpielerTab;
 let resetKaderState, resetBansState, resetFinanzenState, resetMatchesState, resetStatsState, resetSpielerState;
 
+// Enhanced modules
+let searchAndFilter, achievementSystem, analyticsEngine, chartRenderer;
+
 // Configuration variables
 let SUPABASE_URL, SUPABASE_ANON_KEY;
 
@@ -77,7 +80,29 @@ async function initializeModules() {
         renderSpielerTab = spielerModule.renderSpielerTab;
         resetSpielerState = spielerModule.resetSpielerState;
         
+        // Load enhanced modules
+        const searchModule = await import('./search.js');
+        searchAndFilter = searchModule.searchAndFilter;
+        
+        const achievementsModule = await import('./achievements.js');
+        achievementSystem = achievementsModule.achievementSystem;
+        
+        const analyticsModule = await import('./analytics.js');
+        analyticsEngine = analyticsModule.analyticsEngine;
+        
+        const chartsModule = await import('./charts.js');
+        chartRenderer = chartsModule.chartRenderer;
+        
+        const backupModule = await import('./backup.js');
+        window.backupRestoreSystem = backupModule.backupRestoreSystem;
+        
+        const performanceModule = await import('./performance.js');
+        window.performanceMonitor = performanceModule.performanceMonitor;
+        
         console.log('✅ All modules loaded successfully');
+        
+        // Initialize enhanced features
+        await initializeEnhancedFeatures();
         
         // Setup auth state listener after modules are loaded
         setupAuthStateListener();
@@ -100,6 +125,468 @@ async function initializeModules() {
             `;
         }
         return false;
+    }
+}
+
+// Initialize enhanced features
+async function initializeEnhancedFeatures() {
+    try {
+        console.log('🚀 Initializing enhanced features...');
+        
+        // Initialize search and filter
+        if (searchAndFilter && typeof searchAndFilter.init === 'function') {
+            searchAndFilter.init();
+        }
+        
+        // Load achievement data
+        if (achievementSystem && typeof achievementSystem.loadBadges === 'function') {
+            await achievementSystem.loadBadges();
+        }
+        
+        // Add global search button to navigation
+        addGlobalSearchButton();
+        
+        // Setup dropdown menus
+        setupDropdownMenus();
+        
+        // Load user settings
+        loadSettings();
+        
+        console.log('✅ Enhanced features initialized');
+    } catch (error) {
+        console.warn('⚠️ Some enhanced features failed to initialize:', error);
+    }
+}
+
+// Add global search button to navigation
+function addGlobalSearchButton() {
+    const navContainer = document.querySelector('.nav-container');
+    if (!navContainer) return;
+    
+    // Check if search button already exists
+    if (document.getElementById('nav-search')) return;
+    
+    // Create search button
+    const searchButton = document.createElement('a');
+    searchButton.id = 'nav-search';
+    searchButton.href = '#';
+    searchButton.className = 'nav-item search-nav';
+    searchButton.title = 'Globale Suche (Strg+K)';
+    searchButton.innerHTML = `
+        <i class="fas fa-search nav-icon"></i>
+        <span class="nav-label">Suche</span>
+    `;
+    
+    // Add click handler
+    searchButton.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (searchAndFilter && typeof searchAndFilter.showGlobalSearchModal === 'function') {
+            searchAndFilter.showGlobalSearchModal();
+        }
+    });
+    
+    // Insert before logout button
+    const logoutBtn = document.getElementById('logout-btn');
+    if (logoutBtn) {
+        navContainer.insertBefore(searchButton, logoutBtn);
+    } else {
+        navContainer.appendChild(searchButton);
+    }
+}
+
+// Setup dropdown functionality
+function setupDropdownMenus() {
+    const toolsDropdown = document.getElementById('nav-tools');
+    if (!toolsDropdown) return;
+
+    toolsDropdown.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        // Toggle dropdown
+        toolsDropdown.classList.toggle('active');
+        
+        // Close other dropdowns
+        document.querySelectorAll('.dropdown.active').forEach(dropdown => {
+            if (dropdown !== toolsDropdown) {
+                dropdown.classList.remove('active');
+            }
+        });
+    });
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!toolsDropdown.contains(e.target)) {
+            toolsDropdown.classList.remove('active');
+        }
+    });
+
+    // Prevent dropdown from closing when clicking inside
+    const dropdownMenu = document.getElementById('tools-dropdown');
+    if (dropdownMenu) {
+        dropdownMenu.addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+    }
+}
+
+// Global tool functions
+window.showBackupRestore = async function() {
+    if (window.backupRestoreSystem) {
+        await window.backupRestoreSystem.showBackupRestoreModal();
+        // Load backup history
+        window.backupRestoreSystem.loadBackupHistory();
+    }
+    closeAllDropdowns();
+};
+
+window.showPerformanceDashboard = async function() {
+    if (window.performanceMonitor) {
+        await window.performanceMonitor.showPerformanceDashboard();
+    }
+    closeAllDropdowns();
+};
+
+window.showSettings = async function() {
+    await showSettingsModal();
+    closeAllDropdowns();
+};
+
+window.showAbout = async function() {
+    await showAboutModal();
+    closeAllDropdowns();
+};
+
+function closeAllDropdowns() {
+    document.querySelectorAll('.dropdown.active').forEach(dropdown => {
+        dropdown.classList.remove('active');
+    });
+}
+
+// Settings modal
+async function showSettingsModal() {
+    const modalContent = `
+    <div class="p-6">
+        <div class="flex justify-between items-center mb-6">
+            <h3 class="text-xl font-bold text-gray-100 flex items-center">
+                <i class="fas fa-cog mr-3 text-blue-400"></i>
+                Einstellungen
+            </h3>
+            <button onclick="hideModal()" class="text-gray-400 hover:text-gray-200 text-xl">×</button>
+        </div>
+        
+        <!-- Performance Settings -->
+        <div class="mb-6">
+            <h4 class="text-lg font-semibold text-gray-200 mb-3">Performance</h4>
+            <div class="space-y-3">
+                <label class="flex items-center justify-between">
+                    <span class="text-gray-300">Performance-Monitoring aktivieren</span>
+                    <input type="checkbox" id="performance-enabled" class="form-checkbox" ${window.performanceMonitor?.enabled ? 'checked' : ''}>
+                </label>
+                <label class="flex items-center justify-between">
+                    <span class="text-gray-300">Erweiterte Analysen aktivieren</span>
+                    <input type="checkbox" id="analytics-enabled" class="form-checkbox" checked>
+                </label>
+            </div>
+        </div>
+
+        <!-- Backup Settings -->
+        <div class="mb-6">
+            <h4 class="text-lg font-semibold text-gray-200 mb-3">Backup</h4>
+            <div class="space-y-3">
+                <label class="flex items-center justify-between">
+                    <span class="text-gray-300">Automatisches Backup</span>
+                    <input type="checkbox" id="auto-backup-enabled" class="form-checkbox" ${window.backupRestoreSystem?.autoBackupEnabled ? 'checked' : ''}>
+                </label>
+                <div class="flex items-center justify-between">
+                    <span class="text-gray-300">Backup-Intervall</span>
+                    <select id="backup-interval" class="form-select" style="width: auto;">
+                        <option value="30">30 Minuten</option>
+                        <option value="60" selected>1 Stunde</option>
+                        <option value="120">2 Stunden</option>
+                        <option value="360">6 Stunden</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- UI Settings -->
+        <div class="mb-6">
+            <h4 class="text-lg font-semibold text-gray-200 mb-3">Benutzeroberfläche</h4>
+            <div class="space-y-3">
+                <label class="flex items-center justify-between">
+                    <span class="text-gray-300">Animationen aktivieren</span>
+                    <input type="checkbox" id="animations-enabled" class="form-checkbox" checked>
+                </label>
+                <label class="flex items-center justify-between">
+                    <span class="text-gray-300">Achievement-Benachrichtigungen</span>
+                    <input type="checkbox" id="achievement-notifications" class="form-checkbox" checked>
+                </label>
+                <label class="flex items-center justify-between">
+                    <span class="text-gray-300">Globale Suche mit Strg+K</span>
+                    <input type="checkbox" id="global-search-shortcut" class="form-checkbox" checked>
+                </label>
+            </div>
+        </div>
+
+        <!-- Data Settings -->
+        <div class="mb-6">
+            <h4 class="text-lg font-semibold text-gray-200 mb-3">Daten</h4>
+            <div class="space-y-3">
+                <div class="flex items-center justify-between">
+                    <span class="text-gray-300">Cache-Größe</span>
+                    <select id="cache-size" class="form-select" style="width: auto;">
+                        <option value="50">50 Einträge</option>
+                        <option value="100" selected>100 Einträge</option>
+                        <option value="200">200 Einträge</option>
+                        <option value="500">500 Einträge</option>
+                    </select>
+                </div>
+                <button onclick="clearAllCaches()" class="btn btn-danger btn-sm">
+                    <i class="fas fa-trash mr-1"></i>
+                    Alle Caches leeren
+                </button>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex justify-between items-center pt-4 border-t border-slate-600">
+            <button onclick="resetToDefaults()" class="btn btn-secondary">
+                <i class="fas fa-undo mr-2"></i>
+                Zurücksetzen
+            </button>
+            <button onclick="saveSettings()" class="btn btn-primary">
+                <i class="fas fa-save mr-2"></i>
+                Speichern
+            </button>
+        </div>
+    </div>
+    `;
+
+    const { showModal } = await import('./modal.js');
+    showModal(modalContent, { size: 'lg' });
+}
+
+// About modal
+async function showAboutModal() {
+    const modalContent = `
+    <div class="p-6">
+        <div class="flex justify-between items-center mb-6">
+            <h3 class="text-xl font-bold text-gray-100 flex items-center">
+                <i class="fas fa-info-circle mr-3 text-blue-400"></i>
+                Über FIFA Tracker v2
+            </h3>
+            <button onclick="hideModal()" class="text-gray-400 hover:text-gray-200 text-xl">×</button>
+        </div>
+        
+        <div class="text-center mb-6">
+            <div class="text-6xl mb-4">⚽</div>
+            <h4 class="text-2xl font-bold text-gray-100 mb-2">FIFA Tracker v2</h4>
+            <p class="text-gray-400">Umfassende FIFA-Statistiken und -Analysen</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div class="bg-slate-800 rounded-lg p-4">
+                <h5 class="font-semibold text-gray-200 mb-3">Features</h5>
+                <ul class="text-sm text-gray-300 space-y-1">
+                    <li>• Spielerverwaltung & Statistiken</li>
+                    <li>• Match-Tracking & Ergebnisse</li>
+                    <li>• Finanzverwaltung</li>
+                    <li>• Sperren-System</li>
+                    <li>• Erweiterte Analysen & Charts</li>
+                    <li>• Achievement-System</li>
+                    <li>• Globale Suche</li>
+                    <li>• Backup & Restore</li>
+                    <li>• Performance-Monitoring</li>
+                </ul>
+            </div>
+            
+            <div class="bg-slate-800 rounded-lg p-4">
+                <h5 class="font-semibold text-gray-200 mb-3">Technologie</h5>
+                <ul class="text-sm text-gray-300 space-y-1">
+                    <li>• Vanilla JavaScript (ES6+)</li>
+                    <li>• Supabase Backend</li>
+                    <li>• Progressive Web App</li>
+                    <li>• Responsive Design</li>
+                    <li>• Canvas-basierte Charts</li>
+                    <li>• Real-time Updates</li>
+                    <li>• Offline-Funktionalität</li>
+                    <li>• Moderne UI/UX</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="bg-slate-800 rounded-lg p-4 mb-6">
+            <h5 class="font-semibold text-gray-200 mb-3">Entwickelt mit ❤️</h5>
+            <p class="text-sm text-gray-300 mb-3">
+                Diese App wurde entwickelt, um FIFA-Spiele zu verfolgen und umfassende Statistiken zu erstellen. 
+                Mit erweiterten Analysen, Achievements und modernem Design bietet sie eine komplette Lösung für FIFA-Enthusiasten.
+            </p>
+            <div class="text-xs text-gray-400">
+                Version 2.0 • Erstellt ${new Date().getFullYear()} • MIT License
+            </div>
+        </div>
+
+        <div class="text-center">
+            <button onclick="showSystemInfo()" class="btn btn-secondary btn-sm mr-2">
+                <i class="fas fa-desktop mr-1"></i>
+                System-Info
+            </button>
+            <button onclick="window.open('https://github.com/suffig/tracker_v2', '_blank')" class="btn btn-primary btn-sm">
+                <i class="fab fa-github mr-1"></i>
+                GitHub Repository
+            </button>
+        </div>
+    </div>
+    `;
+
+    const { showModal } = await import('./modal.js');
+    showModal(modalContent, { size: 'lg' });
+}
+
+// Settings functions
+window.saveSettings = function() {
+    try {
+        const settings = {
+            performanceEnabled: document.getElementById('performance-enabled')?.checked || false,
+            analyticsEnabled: document.getElementById('analytics-enabled')?.checked || true,
+            autoBackupEnabled: document.getElementById('auto-backup-enabled')?.checked || false,
+            backupInterval: parseInt(document.getElementById('backup-interval')?.value || '60'),
+            animationsEnabled: document.getElementById('animations-enabled')?.checked || true,
+            achievementNotifications: document.getElementById('achievement-notifications')?.checked || true,
+            globalSearchShortcut: document.getElementById('global-search-shortcut')?.checked || true,
+            cacheSize: parseInt(document.getElementById('cache-size')?.value || '100')
+        };
+
+        localStorage.setItem('fifa-tracker-settings', JSON.stringify(settings));
+        
+        // Apply settings
+        applySettings(settings);
+        
+        const { ErrorHandler } = import('./utils.js').then(module => {
+            module.ErrorHandler.showSuccessMessage('Einstellungen gespeichert!');
+        });
+        
+        // Close modal after a delay
+        setTimeout(() => {
+            const { hideModal } = import('./modal.js').then(module => {
+                module.hideModal();
+            });
+        }, 1000);
+        
+    } catch (error) {
+        console.error('Error saving settings:', error);
+    }
+};
+
+window.resetToDefaults = function() {
+    // Reset to default values
+    document.getElementById('performance-enabled').checked = true;
+    document.getElementById('analytics-enabled').checked = true;
+    document.getElementById('auto-backup-enabled').checked = false;
+    document.getElementById('backup-interval').value = '60';
+    document.getElementById('animations-enabled').checked = true;
+    document.getElementById('achievement-notifications').checked = true;
+    document.getElementById('global-search-shortcut').checked = true;
+    document.getElementById('cache-size').value = '100';
+};
+
+window.clearAllCaches = function() {
+    try {
+        if (window.analyticsEngine) {
+            window.analyticsEngine.clearCache();
+        }
+        
+        // Clear other caches
+        localStorage.removeItem('fifa-tracker-search-history');
+        
+        const { ErrorHandler } = import('./utils.js').then(module => {
+            module.ErrorHandler.showSuccessMessage('Alle Caches geleert!');
+        });
+    } catch (error) {
+        console.error('Error clearing caches:', error);
+    }
+};
+
+window.showSystemInfo = async function() {
+    const info = {
+        userAgent: navigator.userAgent,
+        platform: navigator.platform,
+        language: navigator.language,
+        cookieEnabled: navigator.cookieEnabled,
+        onLine: navigator.onLine,
+        screen: `${screen.width}x${screen.height}`,
+        viewport: `${window.innerWidth}x${window.innerHeight}`,
+        memory: performance.memory ? `${Math.round(performance.memory.usedJSHeapSize / 1024 / 1024)}MB used` : 'N/A',
+        connection: navigator.connection ? `${navigator.connection.effectiveType}` : 'N/A'
+    };
+
+    const infoContent = `
+    <div class="p-6">
+        <div class="flex justify-between items-center mb-6">
+            <h3 class="text-xl font-bold text-gray-100">System-Information</h3>
+            <button onclick="hideModal()" class="text-gray-400 hover:text-gray-200 text-xl">×</button>
+        </div>
+        
+        <div class="space-y-3 text-sm">
+            ${Object.entries(info).map(([key, value]) => `
+                <div class="flex justify-between py-2 border-b border-slate-700">
+                    <span class="text-gray-400 capitalize">${key.replace(/([A-Z])/g, ' $1')}:</span>
+                    <span class="text-gray-200 text-right max-w-xs truncate">${value}</span>
+                </div>
+            `).join('')}
+        </div>
+        
+        <div class="mt-6 text-center">
+            <button onclick="copySystemInfo()" class="btn btn-secondary btn-sm">
+                <i class="fas fa-copy mr-1"></i>
+                Info kopieren
+            </button>
+        </div>
+    </div>
+    `;
+
+    const { showModal } = await import('./modal.js');
+    showModal(infoContent);
+};
+
+function applySettings(settings) {
+    // Apply performance monitoring setting
+    if (window.performanceMonitor) {
+        if (settings.performanceEnabled) {
+            window.performanceMonitor.enabled = true;
+        } else {
+            window.performanceMonitor.disable();
+        }
+    }
+
+    // Apply auto-backup setting
+    if (window.backupRestoreSystem) {
+        if (settings.autoBackupEnabled) {
+            window.backupRestoreSystem.setupAutoBackup(settings.backupInterval);
+        } else {
+            window.backupRestoreSystem.disableAutoBackup();
+        }
+    }
+
+    // Apply animation settings
+    if (!settings.animationsEnabled) {
+        document.body.style.setProperty('--transition-fast', '0ms');
+        document.body.style.setProperty('--transition-normal', '0ms');
+        document.body.style.setProperty('--transition-slow', '0ms');
+    }
+}
+
+// Load and apply settings on startup
+function loadSettings() {
+    try {
+        const saved = localStorage.getItem('fifa-tracker-settings');
+        if (saved) {
+            const settings = JSON.parse(saved);
+            applySettings(settings);
+        }
+    } catch (error) {
+        console.warn('Could not load settings:', error);
     }
 }
 
@@ -565,6 +1052,9 @@ function setupBottomNav() {
             element.setAttribute('aria-label', `Wechseln zu ${tab}`);
         }
     });
+    
+    // Setup dropdown menus after DOM is ready
+    setupDropdownMenus();
 }
 window.addEventListener('DOMContentLoaded', setupBottomNav);
 
