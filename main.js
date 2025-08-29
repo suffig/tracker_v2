@@ -449,18 +449,37 @@ async function switchTab(tab) {
     try {
         currentTab = tab;
         
-        // Update bottom navigation only
+        // Enhanced loading states
+        const appDiv = document.getElementById("app");
+        if (appDiv) {
+            appDiv.classList.add('fade-out');
+        }
+        
+        // Update bottom navigation with smooth transition
         updateBottomNavActive(tab);
         showTabLoader(true);
         
-        // Add small delay for better UX
-        await new Promise(resolve => setTimeout(resolve, 200));
+        // Add small delay for better UX and smooth animation
+        await new Promise(resolve => setTimeout(resolve, 150));
         
         await renderCurrentTab();
+        
+        // Smooth transition in
+        if (appDiv) {
+            appDiv.classList.remove('fade-out');
+            appDiv.classList.add('fade-in');
+            setTimeout(() => appDiv.classList.remove('fade-in'), 500);
+        }
+        
         showTabLoader(false);
+        
+        // Show success feedback for non-matches tabs
+        if (tab !== 'matches') {
+            loadingManager.hide('tab-loading');
+        }
     } catch (error) {
         console.error('Error switching tab:', error);
-        ErrorHandler.showUserError('Fehler beim Wechseln des Tabs');
+        ErrorHandler.showUserError(`Fehler beim Laden von ${tab}. Bitte versuchen Sie es erneut.`, 'error');
         showTabLoader(false);
     }
 }
@@ -512,14 +531,40 @@ function setupTabButtons() {
     tabButtonsInitialized = true;
 }
 
-// Bottom Navigation für Mobile Geräte
+// Enhanced Bottom Navigation für Mobile Geräte with keyboard support
 function setupBottomNav() {
-    document.getElementById("nav-squad")?.addEventListener("click", e => { e.preventDefault(); switchTab("squad"); });
-    document.getElementById("nav-matches")?.addEventListener("click", e => { e.preventDefault(); switchTab("matches"); });
-    document.getElementById("nav-bans")?.addEventListener("click", e => { e.preventDefault(); switchTab("bans"); });
-    document.getElementById("nav-finanzen")?.addEventListener("click", e => { e.preventDefault(); switchTab("finanzen"); });
-    document.getElementById("nav-stats")?.addEventListener("click", e => { e.preventDefault(); switchTab("stats"); });
-    document.getElementById("nav-spieler")?.addEventListener("click", e => { e.preventDefault(); switchTab("spieler"); });
+    const navItems = [
+        { id: "nav-squad", tab: "squad" },
+        { id: "nav-matches", tab: "matches" },
+        { id: "nav-bans", tab: "bans" },
+        { id: "nav-finanzen", tab: "finanzen" },
+        { id: "nav-stats", tab: "stats" },
+        { id: "nav-spieler", tab: "spieler" }
+    ];
+    
+    navItems.forEach(({ id, tab }) => {
+        const element = document.getElementById(id);
+        if (element) {
+            // Mouse click handler
+            element.addEventListener("click", e => { 
+                e.preventDefault(); 
+                switchTab(tab); 
+            });
+            
+            // Keyboard navigation support
+            element.addEventListener("keydown", e => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    switchTab(tab);
+                }
+            });
+            
+            // Add better focus management
+            element.setAttribute('tabindex', '0');
+            element.setAttribute('role', 'button');
+            element.setAttribute('aria-label', `Wechseln zu ${tab}`);
+        }
+    });
 }
 window.addEventListener('DOMContentLoaded', setupBottomNav);
 
@@ -701,10 +746,16 @@ async function renderLoginArea() {
                         return;
                     }
                     
+                    // Clear any concatenated values and get fresh values
+                    const emailValue = emailInput.value.trim();
+                    const passwordValue = passwordInput.value.trim();
+                    
+                    console.log("🔑 Login attempt - Email:", emailValue, "Password length:", passwordValue.length);
+                    
                     // Capture edit mode preference - inverted logic: checked = edit mode, unchecked = read-only mode
                     const readOnlyMode = editModeCheckbox ? !editModeCheckbox.checked : true;
                     setReadOnlyMode(readOnlyMode);
-                    console.log("🔑 Attempting login with:", emailInput.value, "Read-only mode:", readOnlyMode);
+                    console.log("🔑 Read-only mode:", readOnlyMode);
                     
                     // Show loading state
                     if (loginBtn) {
@@ -713,13 +764,13 @@ async function renderLoginArea() {
                     }
                     
                     try {
-                        await signIn(emailInput.value, passwordInput.value);
+                        await signIn(emailValue, passwordValue);
                         console.log("✅ Login successful, waiting for auth state change");
                     } catch (error) {
                         console.error("❌ Login failed:", error);
                         if (loginBtn) {
                             loginBtn.disabled = false;
-                            loginBtn.innerHTML = '<i class="fas fa-sign-in-alt mr-2"></i> Anmelden';
+                            loginBtn.innerHTML = '<i class="fas fa-sign-in-alt mr-2"></i> <span>Anmelden</span>';
                         }
                     }
                 };
@@ -838,18 +889,29 @@ async function showLoginForm() {
         if (form) {
             form.addEventListener('submit', async (e) => {
                 e.preventDefault();
-                const email = document.getElementById('email').value;
-                const password = document.getElementById('pw').value;
+                const emailInput = document.getElementById('email');
+                const passwordInput = document.getElementById('pw');
                 const editModeCheckbox = document.getElementById('editMode');
+                
+                if (!emailInput || !passwordInput) {
+                    console.error("Login form inputs not found");
+                    return;
+                }
+                
+                // Clear any concatenated values and get fresh values
+                const email = emailInput.value.trim();
+                const password = passwordInput.value.trim();
+                
+                console.log("🔑 Login attempt - Email:", email, "Password length:", password.length);
                 
                 // Capture edit mode preference - inverted logic: checked = edit mode, unchecked = read-only mode
                 const readOnlyMode = editModeCheckbox ? !editModeCheckbox.checked : true;
                 setReadOnlyMode(readOnlyMode);
-                console.log(`🔑 Attempting login with: ${email}, Read-only mode: ${readOnlyMode}`);
+                console.log(`🔑 Read-only mode: ${readOnlyMode}`);
                 
                 const submitBtn = form.querySelector('button[type="submit"]');
                 if (submitBtn) {
-                    submitBtn.textContent = 'Anmelden...';
+                    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Anmelden...';
                     submitBtn.disabled = true;
                 }
                 
