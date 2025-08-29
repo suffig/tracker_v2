@@ -1625,7 +1625,144 @@ body {
   box-shadow: 0 6px 20px rgba(16, 185, 129, 0.3);
 }
 
-/* Mobile Responsive Adjustments for Stats */
+/* === ENHANCED ANIMATIONS & TRANSITIONS === */
+
+@keyframes fadeIn {
+  from { 
+    opacity: 0; 
+    transform: translateY(20px);
+  }
+  to { 
+    opacity: 1; 
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeOut {
+  from { 
+    opacity: 1; 
+    transform: translateY(0);
+  }
+  to { 
+    opacity: 0; 
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes slideUp {
+  from { 
+    transform: translateY(30px); 
+    opacity: 0; 
+  }
+  to { 
+    transform: translateY(0); 
+    opacity: 1; 
+  }
+}
+
+@keyframes slideIn {
+  from { 
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to { 
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* Fade transition classes */
+.fade-in {
+  animation: fadeIn 0.4s ease-out;
+}
+
+.fade-out {
+  animation: fadeOut 0.2s ease-in;
+}
+
+.slide-up {
+  animation: slideUp 0.4s var(--bounce);
+}
+
+.slide-in {
+  animation: slideIn 0.3s ease-out;
+}
+
+/* Enhanced Loading States */
+.loading {
+  opacity: 0.6;
+  pointer-events: none;
+  position: relative;
+}
+
+.loading::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(1px);
+  z-index: 10;
+}
+
+/* Enhanced Notification Close Button */
+.notification-close {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+}
+
+.notification-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+  transform: scale(1.1);
+}
+
+/* Loading overlay improvements */
+#tab-loader {
+  backdrop-filter: blur(8px);
+  background: rgba(0, 0, 0, 0.4);
+}
+
+#tab-loader .spinner {
+  width: 40px;
+  height: 40px;
+  border-width: 4px;
+}
+
+/* Better page transitions */
+.page-container {
+  animation: fadeIn 0.5s ease-out;
+}
+
+/* Enhanced hover states for interactive elements */
+.modern-card:hover,
+.team-goals-card:hover,
+.stat-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-xl);
+  border-color: var(--primary-green);
+}
+
+/* Smooth color transitions */
+* {
+  transition: color var(--transition-fast), background-color var(--transition-fast), border-color var(--transition-fast);
+}
 @media (max-width: 768px) {
   .goals-comparison {
     grid-template-columns: 1fr;

@@ -152,21 +152,43 @@ export class ErrorHandler {
     static showUserError(message, type = 'error') {
         console.error('User Error:', message);
         
-        // Create or update error notification
+        // Create enhanced notification
         let notification = document.getElementById('error-notification');
         if (!notification) {
             notification = document.createElement('div');
             notification.id = 'error-notification';
-            notification.className = 'fixed top-4 left-1/2 transform -translate-x-1/2 z-50 w-full mx-4';
+            notification.className = 'notification';
             document.body.appendChild(notification);
         }
 
-        const colorClasses = {
-            error: 'bg-red-500 text-white',
-            warning: 'bg-yellow-500 text-white',
-            info: 'bg-blue-500 text-white',
-            success: 'bg-green-500 text-white'
+        // Enhanced notification types with better styling
+        const notificationTypes = {
+            error: { icon: '❌', title: 'Fehler', className: 'error' },
+            warning: { icon: '⚠️', title: 'Warnung', className: 'warning' },
+            info: { icon: 'ℹ️', title: 'Information', className: 'info' },
+            success: { icon: '✅', title: 'Erfolg', className: 'success' }
         };
+
+        const config = notificationTypes[type] || notificationTypes.error;
+        
+        notification.className = `notification ${config.className} slide-up`;
+        notification.innerHTML = `
+            <div class="notification-icon">${config.icon}</div>
+            <div class="notification-content">
+                <div class="notification-title">${config.title}</div>
+                <div class="notification-message">${message}</div>
+            </div>
+            <button class="notification-close" onclick="this.parentElement.remove()">×</button>
+        `;
+
+        // Auto-dismiss after delay based on type
+        const dismissDelay = type === 'success' ? 3000 : type === 'info' ? 5000 : 8000;
+        setTimeout(() => {
+            if (notification && notification.parentElement) {
+                notification.style.animation = 'fadeOut 0.3s ease-out forwards';
+                setTimeout(() => notification.remove(), 300);
+            }
+        }, dismissDelay);
 
         notification.innerHTML = `
             <div class="rounded-lg p-4 shadow-lg ${colorClasses[type] || colorClasses.error}">

@@ -449,18 +449,37 @@ async function switchTab(tab) {
     try {
         currentTab = tab;
         
-        // Update bottom navigation only
+        // Enhanced loading states
+        const appDiv = document.getElementById("app");
+        if (appDiv) {
+            appDiv.classList.add('fade-out');
+        }
+        
+        // Update bottom navigation with smooth transition
         updateBottomNavActive(tab);
         showTabLoader(true);
         
-        // Add small delay for better UX
-        await new Promise(resolve => setTimeout(resolve, 200));
+        // Add small delay for better UX and smooth animation
+        await new Promise(resolve => setTimeout(resolve, 150));
         
         await renderCurrentTab();
+        
+        // Smooth transition in
+        if (appDiv) {
+            appDiv.classList.remove('fade-out');
+            appDiv.classList.add('fade-in');
+            setTimeout(() => appDiv.classList.remove('fade-in'), 500);
+        }
+        
         showTabLoader(false);
+        
+        // Show success feedback for non-matches tabs
+        if (tab !== 'matches') {
+            loadingManager.hide('tab-loading');
+        }
     } catch (error) {
         console.error('Error switching tab:', error);
-        ErrorHandler.showUserError('Fehler beim Wechseln des Tabs');
+        ErrorHandler.showUserError(`Fehler beim Laden von ${tab}. Bitte versuchen Sie es erneut.`, 'error');
         showTabLoader(false);
     }
 }
@@ -512,14 +531,40 @@ function setupTabButtons() {
     tabButtonsInitialized = true;
 }
 
-// Bottom Navigation für Mobile Geräte
+// Enhanced Bottom Navigation für Mobile Geräte with keyboard support
 function setupBottomNav() {
-    document.getElementById("nav-squad")?.addEventListener("click", e => { e.preventDefault(); switchTab("squad"); });
-    document.getElementById("nav-matches")?.addEventListener("click", e => { e.preventDefault(); switchTab("matches"); });
-    document.getElementById("nav-bans")?.addEventListener("click", e => { e.preventDefault(); switchTab("bans"); });
-    document.getElementById("nav-finanzen")?.addEventListener("click", e => { e.preventDefault(); switchTab("finanzen"); });
-    document.getElementById("nav-stats")?.addEventListener("click", e => { e.preventDefault(); switchTab("stats"); });
-    document.getElementById("nav-spieler")?.addEventListener("click", e => { e.preventDefault(); switchTab("spieler"); });
+    const navItems = [
+        { id: "nav-squad", tab: "squad" },
+        { id: "nav-matches", tab: "matches" },
+        { id: "nav-bans", tab: "bans" },
+        { id: "nav-finanzen", tab: "finanzen" },
+        { id: "nav-stats", tab: "stats" },
+        { id: "nav-spieler", tab: "spieler" }
+    ];
+    
+    navItems.forEach(({ id, tab }) => {
+        const element = document.getElementById(id);
+        if (element) {
+            // Mouse click handler
+            element.addEventListener("click", e => { 
+                e.preventDefault(); 
+                switchTab(tab); 
+            });
+            
+            // Keyboard navigation support
+            element.addEventListener("keydown", e => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    switchTab(tab);
+                }
+            });
+            
+            // Add better focus management
+            element.setAttribute('tabindex', '0');
+            element.setAttribute('role', 'button');
+            element.setAttribute('aria-label', `Wechseln zu ${tab}`);
+        }
+    });
 }
 window.addEventListener('DOMContentLoaded', setupBottomNav);
 
