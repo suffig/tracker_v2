@@ -417,73 +417,7 @@ class SupabaseWrapper {
   }
 }
 
-// Initialize the SupabaseDB wrapper after class definition
-supabaseDb = new SupabaseWrapper(null);
 
-// Export supabaseDb after initialization
-export { supabaseDb };
-
-// Initial setup of the client reference
-updateSupabaseDbClient();
-
-// Enhanced auth event handler with better error handling and monitoring
-const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
-  const userInfo = session?.user?.email || 'No user';
-  console.log(`Auth state changed: ${event}`, userInfo);
-  
-  // Update connection stats based on auth events
-  if (event === 'SIGNED_IN') {
-    console.log('✅ User signed in successfully');
-    supabaseDb.resetStats(); // Reset stats on new session
-  } else if (event === 'SIGNED_OUT') {
-    console.log('👋 User signed out');
-    supabaseDb.resetStats(); // Reset stats on sign out
-  } else if (event === 'TOKEN_REFRESHED') {
-    if (session) {
-      console.log('🔄 Auth token refreshed successfully');
-    } else {
-      console.error('❌ Token refresh failed - user may need to re-authenticate');
-      window.dispatchEvent(new CustomEvent('supabase-session-expired', {
-        detail: { timestamp: new Date().toISOString() }
-      }));
-    }
-  } else if (event === 'USER_UPDATED') {
-    console.log('👤 User profile updated');
-  } else if (event === 'PASSWORD_RECOVERY') {
-    console.log('🔐 Password recovery initiated');
-  }
-  
-  // Dispatch custom event for app-wide auth state management
-  window.dispatchEvent(new CustomEvent('auth-state-change', {
-    detail: { event, session, user: session?.user }
-  }));
-});
-
-// Add connection monitoring for debugging
-if (typeof window !== 'undefined') {
-  // Global access for debugging
-  window.supabase = supabase;
-  window.supabaseDb = supabaseDb;
-  
-  // Add debugging helpers
-  window.supabaseDebug = {
-    getStats: () => supabaseDb.getStats(),
-    resetStats: () => supabaseDb.resetStats(),
-    healthCheck: () => supabaseDb.healthCheck(),
-    getQueueLength: () => supabaseDb.requestQueue.length,
-    getActiveRequests: () => supabaseDb.activeRequests
-  };
-  
-  // Periodic stats logging in development
-  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-    setInterval(() => {
-      const stats = supabaseDb.getStats();
-      if (stats.totalRequests > 0) {
-        console.log('📊 Supabase Stats:', stats);
-      }
-    }, 60000); // Log every minute
-  }
-}
 
 // Performance monitoring for database operations
 class DatabasePerformanceMonitor {

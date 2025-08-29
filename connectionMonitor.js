@@ -43,26 +43,22 @@ class ConnectionMonitor {
 
     // Detect what type of connection we have
     detectConnectionType() {
-        if (usingFallback) {
-            // Check if we're using fallback due to CDN blocking vs no credentials
-            const hasCredentials = (typeof window !== 'undefined' && 
-                window.location && 
-                document.querySelector('script[src*="supabase"]')) ||
-                (SUPABASE_URL !== 'https://your-project.supabase.co' && 
+        // Since we removed demo/fallback mode, we always try real connection
+        if (typeof window !== 'undefined' && 
+            window.location && 
+            document.querySelector('script[src*="supabase"]')) {
+            
+            // Check if we have real Supabase credentials configured
+            const hasValidCredentials = (SUPABASE_URL !== 'https://your-project.supabase.co' && 
                  SUPABASE_ANON_KEY !== 'your-anon-key' &&
                  SUPABASE_URL.includes('.supabase.co'));
                  
-            // For this demo app with hardcoded credentials, treat as demo mode
-            // The hardcoded credentials are for demo purposes
-            if (SUPABASE_URL === 'https://buduldeczjwnjvsckqat.supabase.co') {
-                this.connectionType = 'fallback';
-                console.log('🔄 Connection type: Demo mode with sample credentials');
-            } else if (hasCredentials) {
-                this.connectionType = 'cdn-blocked';
-                console.log('🔄 Connection type: CDN blocked, trying fallback with real credentials');
+            if (hasValidCredentials) {
+                this.connectionType = 'real';
+                console.log('🔄 Connection type: Real Supabase database connection');
             } else {
-                this.connectionType = 'fallback';
-                console.log('🔄 Connection type: Fallback mode (demo data)');
+                this.connectionType = 'unconfigured';
+                console.log('🔄 Connection type: Supabase credentials not configured');
             }
         } else if (!navigator.onLine) {
             this.connectionType = 'offline';
@@ -150,14 +146,6 @@ class ConnectionMonitor {
                         message: 'Datenbankverbindung aktiv'
                     });
                 }
-                return true;
-                    this.notifyListeners({ 
-                        connected: true, 
-                        reconnected: true,
-                        message: 'Datenbankverbindung wiederhergestellt'
-                    });
-                }
-
                 return true;
             } catch (abortError) {
                 clearTimeout(timeoutId);
@@ -325,14 +313,9 @@ class ConnectionMonitor {
         this.keepAliveTimer = setInterval(async () => {
             if (!this.isPaused && this.isConnected) {
                 try {
-                    // Only ping real database if not using fallback
-                    if (!usingFallback) {
-                        await supabase.from('players').select('id').limit(1);
-                        // Optional: console.log('KeepAlive: Ping sent');
-                    } else {
-                        // In fallback mode, just simulate a successful ping
-                        console.log('KeepAlive: Demo mode - simulating ping');
-                    }
+                    // Always ping real database (no more fallback mode)
+                    await supabase.from('players').select('id').limit(1);
+                    // Optional: console.log('KeepAlive: Ping sent');
                 } catch (e) {
                     console.warn('KeepAlive failed:', e.message);
                 }
@@ -377,7 +360,7 @@ class ConnectionMonitor {
         // Listen for online/offline events
         window.addEventListener('online', () => {
             console.log('🌐 Network connection restored');
-            this.connectionType = usingFallback ? 'fallback' : 'real';
+            this.connectionType = 'real'; // Always real since no more fallback mode
             if (!this.isConnected) {
                 // Reset reconnection attempts when network comes back
                 this.reconnectAttempts = 0;
@@ -445,8 +428,8 @@ class ConnectionMonitor {
                     ? Math.round((this.connectionMetrics.successfulConnections / this.connectionMetrics.totalConnections) * 100)
                     : 0
             },
-            networkOnline: navigator.onLine,
-            usingFallback: usingFallback
+            networkOnline: navigator.onLine
+            // Removed usingFallback since we no longer have fallback mode
         };
     }
 
@@ -520,7 +503,7 @@ export const connectionMonitor = new ConnectionMonitor();
 
 // Utility function to check if we should attempt database operations
 export function isDatabaseAvailable() {
-    return usingFallback || connectionMonitor.isConnected;
+    return connectionMonitor.isConnected; // Always check real connection since no more fallback
 }
 
 // Function to test real database connectivity (doesn't affect regular health checks)
