@@ -1,26 +1,100 @@
-import { supabase, supabaseDb, usingFallback } from './supabaseClient.js';
-import { connectionMonitor, isDatabaseAvailable } from './connectionMonitor.js';
-import { dataManager } from './dataManager.js';
-import { loadingManager, ErrorHandler, eventBus } from './utils.js';
-import { showModal, hideModal } from './modal.js';
-import { setReadOnlyMode, isInReadOnlyMode } from './appState.js';
+// Dynamic imports to handle loading issues gracefully
+let supabase, supabaseDb, usingFallback;
+let connectionMonitor, isDatabaseAvailable;
+let dataManager;
+let loadingManager, ErrorHandler, eventBus;
+let showModal, hideModal;
+let setReadOnlyMode, isInReadOnlyMode;
+let signUp, signIn, signOut;
+let renderKaderTab, renderBansTab, renderMatchesTab, renderStatsTab, renderFinanzenTab, renderSpielerTab;
+let resetKaderState, resetBansState, resetFinanzenState, resetMatchesState, resetStatsState, resetSpielerState;
 
-import { signUp, signIn, signOut } from './auth.js';
-import { renderKaderTab } from './kader.js';
-import { renderBansTab } from './bans.js';
-import { renderMatchesTab } from './matches.js';
-import { renderStatsTab } from './stats.js';
-import { renderFinanzenTab } from './finanzen.js';
-import { renderSpielerTab } from './spieler.js';
-
-// --- NEU: Reset-Functions für alle Module importieren ---
-import { resetKaderState } from './kader.js';
-import { resetBansState } from './bans.js';
-import { resetFinanzenState } from './finanzen.js';
-import { resetMatchesState } from './matches.js';
-// Falls du sie hast:
-import { resetStatsState } from './stats.js';
-import { resetSpielerState } from './spieler.js';
+// Initialize modules asynchronously
+async function initializeModules() {
+    try {
+        console.log('🔄 Loading modules...');
+        
+        // Load core modules
+        const supabaseModule = await import('./supabaseClient.js');
+        supabase = supabaseModule.supabase;
+        supabaseDb = supabaseModule.supabaseDb;
+        usingFallback = supabaseModule.usingFallback;
+        
+        const connectionModule = await import('./connectionMonitor.js');
+        connectionMonitor = connectionModule.connectionMonitor;
+        isDatabaseAvailable = connectionModule.isDatabaseAvailable;
+        
+        const dataModule = await import('./dataManager.js');
+        dataManager = dataModule.dataManager;
+        
+        const utilsModule = await import('./utils.js');
+        loadingManager = utilsModule.loadingManager;
+        ErrorHandler = utilsModule.ErrorHandler;
+        eventBus = utilsModule.eventBus;
+        
+        const modalModule = await import('./modal.js');
+        showModal = modalModule.showModal;
+        hideModal = modalModule.hideModal;
+        
+        const appStateModule = await import('./appState.js');
+        setReadOnlyMode = appStateModule.setReadOnlyMode;
+        isInReadOnlyMode = appStateModule.isInReadOnlyMode;
+        
+        const authModule = await import('./auth.js');
+        signUp = authModule.signUp;
+        signIn = authModule.signIn;
+        signOut = authModule.signOut;
+        
+        // Load tab modules
+        const kaderModule = await import('./kader.js');
+        renderKaderTab = kaderModule.renderKaderTab;
+        resetKaderState = kaderModule.resetKaderState;
+        
+        const bansModule = await import('./bans.js');
+        renderBansTab = bansModule.renderBansTab;
+        resetBansState = bansModule.resetBansState;
+        
+        const matchesModule = await import('./matches.js');
+        renderMatchesTab = matchesModule.renderMatchesTab;
+        resetMatchesState = matchesModule.resetMatchesState;
+        
+        const statsModule = await import('./stats.js');
+        renderStatsTab = statsModule.renderStatsTab;
+        resetStatsState = statsModule.resetStatsState;
+        
+        const finanzenModule = await import('./finanzen.js');
+        renderFinanzenTab = finanzenModule.renderFinanzenTab;
+        resetFinanzenState = finanzenModule.resetFinanzenState;
+        
+        const spielerModule = await import('./spieler.js');
+        renderSpielerTab = spielerModule.renderSpielerTab;
+        resetSpielerState = spielerModule.resetSpielerState;
+        
+        console.log('✅ All modules loaded successfully');
+        
+        // Setup auth state listener after modules are loaded
+        setupAuthStateListener();
+        
+        return true;
+    } catch (error) {
+        console.error('❌ Failed to load modules:', error);
+        // Show error to user
+        const loginDiv = document.getElementById('login-area');
+        if (loginDiv) {
+            loginDiv.innerHTML = `
+                <div style="color:red;padding:2rem;text-align:center;background:white;border-radius:8px;margin:2rem;">
+                    <h2>Fehler beim Laden der Anwendung</h2>
+                    <p>Einige Komponenten konnten nicht geladen werden.</p>
+                    <p>Fehler: ${error.message}</p>
+                    <button onclick="location.reload()" style="padding:8px 16px;background:#007bff;color:white;border:none;border-radius:4px;cursor:pointer;">
+                        Seite neu laden
+                    </button>
+                </div>
+            `;
+        }
+        return false;
+    }
+}
 
 let currentTab = "matches";
 let liveSyncInitialized = false;
@@ -778,25 +852,41 @@ async function showLoginForm() {
     }
 }
 
-// Enhanced auth state change listener
-supabase.auth.onAuthStateChange(async (event, session) => {
-    console.log(`🔐 Auth state changed: ${event}`, session?.user?.email || 'No user');
+// Setup auth state listener after modules are loaded
+function setupAuthStateListener() {
+    if (!supabase || !supabase.auth) {
+        console.warn('Supabase not available for auth state listener');
+        return;
+    }
     
-    // Add a small delay to ensure DOM is ready
-    setTimeout(async () => {
-        try {
-            if (event === 'SIGNED_IN' && session) {
-                await showMainApp();
-            } else {
-                await showLoginForm();
+    // Enhanced auth state change listener
+    supabase.auth.onAuthStateChange(async (event, session) => {
+        console.log(`🔐 Auth state changed: ${event}`, session?.user?.email || 'No user');
+        
+        // Add a small delay to ensure DOM is ready
+        setTimeout(async () => {
+            try {
+                if (event === 'SIGNED_IN' && session) {
+                    await showMainApp();
+                } else {
+                    await showLoginForm();
+                }
+            } catch (error) {
+                console.error('Error handling auth state change:', error);
             }
-        } catch (error) {
-            console.error('Error handling auth state change:', error);
-        }
-    }, 100);
-});
+        }, 100);
+    });
+}
+
 window.addEventListener('DOMContentLoaded', async () => {
 	console.log("DOMContentLoaded!");
+    
+    // First, initialize all modules
+    const modulesLoaded = await initializeModules();
+    if (!modulesLoaded) {
+        console.error('Failed to initialize modules, cannot continue');
+        return;
+    }
     
     // Show fallback status if using fallback mode
     if (usingFallback) {
@@ -853,5 +943,7 @@ window.addEventListener('beforeunload', () => {
     if (inactivityCleanupTimer) {
         clearTimeout(inactivityCleanupTimer);
     }
-    connectionMonitor.destroy();
+    if (connectionMonitor && typeof connectionMonitor.destroy === 'function') {
+        connectionMonitor.destroy();
+    }
 });
