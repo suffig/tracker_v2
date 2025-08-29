@@ -163,31 +163,87 @@ export async function renderStatsTab(containerId = "app") {
         </div>
         <div class="flex flex-col gap-6">
 
-            <!-- Übersicht -->
-            <div class="rounded-xl shadow border bg-gray-800 p-4 mb-2">
-                <div class="font-bold text-lg mb-1">Übersicht</div>
-                <div class="flex flex-wrap gap-4 items-center text-base font-medium mb-2">
-                    <span class="flex items-center gap-1 text-blue-700"><span class="text-xl">⚽</span> ${totalGoals} Tore</span>
-                    <span class="flex items-center gap-1 text-yellow-600"><span class="text-xl">🟨</span> ${totalGelb} Gelbe Karten</span>
-                    <span class="flex items-center gap-1 text-red-600"><span class="text-xl">🟥</span> ${totalRot} Rote Karten</span>
+            <!-- Enhanced Übersicht with Visual Elements -->
+            <div class="modern-card slide-up">
+                <div class="font-bold text-lg mb-3 flex items-center gap-2">
+                    <span class="text-3xl">📊</span>
+                    <span>Übersicht</span>
                 </div>
-                <div class="flex flex-wrap gap-4 text-base mt-1">
-                    <span>Ø Tore/Spiel: <b>${avgGoalsPerMatch}</b></span>
-                    <span>Ø Karten/Spiel: <b>${avgCardsPerMatch}</b></span>
-                </div>
-                <div class="flex flex-col gap-1 text-xs mt-2 text-gray-600">
-                    ${maxGoalsSingle > 0 ? `Meiste Tore eines Spielers in einem Spiel: <b>${maxGoalsSingle}</b> (${maxGoalsPlayer?.name || "?"})` : ""}
-                </div>
-                <div class="flex flex-col gap-1 text-xs mt-2">
-                    <div>
-                        <span class="font-bold text-blue-800">Höchster AEK-Sieg:</span>
-                        ${aekBestWin ? `${aekBestWin.goalsFor}:${aekBestWin.goalsAgainst} (${aekBestWin.date})` : "–"}
+                
+                <!-- Main Stats with Visual Progress -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    <div class="stat-card goals">
+                        <div class="stat-icon">⚽</div>
+                        <div class="stat-value">${totalGoals}</div>
+                        <div class="stat-label">Tore gesamt</div>
+                        <div class="stat-progress">
+                            <div class="progress-bar" style="width: ${Math.min(100, (totalGoals / 20) * 100)}%"></div>
+                        </div>
                     </div>
-                    <div>
-                        <span class="font-bold text-red-800">Höchster Real-Sieg:</span>
-                        ${realBestWin ? `${realBestWin.goalsFor}:${realBestWin.goalsAgainst} (${realBestWin.date})` : "–"}
+                    
+                    <div class="stat-card warnings">
+                        <div class="stat-icon">🟨</div>
+                        <div class="stat-value">${totalGelb}</div>
+                        <div class="stat-label">Gelbe Karten</div>
+                        <div class="stat-progress warning">
+                            <div class="progress-bar" style="width: ${Math.min(100, (totalGelb / 10) * 100)}%"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card danger">
+                        <div class="stat-icon">🟥</div>
+                        <div class="stat-value">${totalRot}</div>
+                        <div class="stat-label">Rote Karten</div>
+                        <div class="stat-progress danger">
+                            <div class="progress-bar" style="width: ${Math.min(100, (totalRot / 5) * 100)}%"></div>
+                        </div>
                     </div>
                 </div>
+                
+                <!-- Average Stats -->
+                <div class="flex flex-wrap gap-4 text-base mt-4 p-3 bg-gray-700 rounded-lg">
+                    <div class="stat-avg">
+                        <span class="stat-avg-label">Ø Tore/Spiel:</span>
+                        <span class="stat-avg-value">${avgGoalsPerMatch}</span>
+                    </div>
+                    <div class="stat-avg">
+                        <span class="stat-avg-label">Ø Karten/Spiel:</span>
+                        <span class="stat-avg-value">${avgCardsPerMatch}</span>
+                    </div>
+                </div>
+                
+                <!-- Team Best Wins -->
+                <div class="team-wins mt-4">
+                    <h4 class="font-semibold mb-2 text-gray-300">🏆 Beste Siege</h4>
+                    <div class="flex flex-col gap-2">
+                        <div class="team-win aek">
+                            <span class="team-badge aek">AEK</span>
+                            <span class="win-result">
+                                ${aekBestWin ? `${aekBestWin.goalsFor}:${aekBestWin.goalsAgainst}` : '–'}
+                            </span>
+                            <span class="win-date">${aekBestWin ? `(${aekBestWin.date})` : ''}</span>
+                        </div>
+                        <div class="team-win real">
+                            <span class="team-badge real">Real</span>
+                            <span class="win-result">
+                                ${realBestWin ? `${realBestWin.goalsFor}:${realBestWin.goalsAgainst}` : '–'}
+                            </span>
+                            <span class="win-date">${realBestWin ? `(${realBestWin.date})` : ''}</span>
+                        </div>
+                    </div>
+                </div>
+                
+                ${maxGoalsSingle > 0 ? `
+                <div class="highlight-stat mt-4 p-3 bg-gradient-to-r from-green-900/50 to-blue-900/50 rounded-lg border border-green-600/30">
+                    <div class="flex items-center gap-2">
+                        <span class="text-2xl">🎯</span>
+                        <div>
+                            <div class="font-semibold text-green-300">Rekord: ${maxGoalsSingle} Tore in einem Spiel</div>
+                            <div class="text-sm text-gray-300">${maxGoalsPlayer?.name || "?"}</div>
+                        </div>
+                    </div>
+                </div>
+                ` : ""}
             </div>
 
             <!-- Sperren -->
@@ -222,15 +278,55 @@ export async function renderStatsTab(containerId = "app") {
                 ${bansTableHtml}
             </div>
 
-            <!-- Geschossene Tore -->
-            <div class="flex gap-4 mb-2">
-                <div class="flex-1 flex flex-col items-center justify-center rounded-xl bg-blue-50 text-blue-900 border border-blue-200 shadow px-4 py-3 min-w-[130px]">
-                    <span class="font-bold text-lg flex items-center gap-2">AEK: <span class="text-2xl">${totalToreAek}</span></span>
-                    <span class="flex items-center gap-1 mt-1 text-base">${topScorerAek ? `👑 <span class="font-semibold">${topScorerAek.name}</span> <span class="text-xs">(${topScorerAek.goals})</span>` : "–"}</span>
+            <!-- Enhanced Goal Comparison -->
+            <div class="modern-card slide-up">
+                <div class="font-bold text-lg mb-4 flex items-center gap-2">
+                    <span class="text-2xl">⚽</span>
+                    <span>Torstatistiken</span>
                 </div>
-                <div class="flex-1 flex flex-col items-center justify-center rounded-xl bg-red-50 text-red-900 border border-red-200 shadow px-4 py-3 min-w-[130px]">
-                    <span class="font-bold text-lg flex items-center gap-2">Real: <span class="text-2xl">${totalToreReal}</span></span>
-                    <span class="flex items-center gap-1 mt-1 text-base">${topScorerReal ? `👑 <span class="font-semibold">${topScorerReal.name}</span> <span class="text-xs">(${topScorerReal.goals})</span>` : "–"}</span>
+                
+                <div class="goals-comparison">
+                    <div class="team-goals-card aek">
+                        <div class="team-goals-header">
+                            <span class="team-badge-large aek">AEK</span>
+                            <div class="goals-count">${totalToreAek}</div>
+                        </div>
+                        <div class="goals-bar-container">
+                            <div class="goals-bar aek" style="width: ${totalToreAek || totalToreReal ? (totalToreAek / Math.max(totalToreAek, totalToreReal, 1)) * 100 : 50}%"></div>
+                        </div>
+                        <div class="top-scorer">
+                            ${topScorerAek ? `
+                                <div class="scorer-info">
+                                    <span class="crown">👑</span>
+                                    <span class="scorer-name">${topScorerAek.name}</span>
+                                    <span class="scorer-goals">${topScorerAek.goals} ⚽</span>
+                                </div>
+                            ` : '<span class="no-scorer">Kein Torschütze</span>'}
+                        </div>
+                    </div>
+                    
+                    <div class="vs-divider">
+                        <span class="vs-text">VS</span>
+                    </div>
+                    
+                    <div class="team-goals-card real">
+                        <div class="team-goals-header">
+                            <span class="team-badge-large real">Real</span>
+                            <div class="goals-count">${totalToreReal}</div>
+                        </div>
+                        <div class="goals-bar-container">
+                            <div class="goals-bar real" style="width: ${totalToreAek || totalToreReal ? (totalToreReal / Math.max(totalToreAek, totalToreReal, 1)) * 100 : 50}%"></div>
+                        </div>
+                        <div class="top-scorer">
+                            ${topScorerReal ? `
+                                <div class="scorer-info">
+                                    <span class="crown">👑</span>
+                                    <span class="scorer-name">${topScorerReal.name}</span>
+                                    <span class="scorer-goals">${topScorerReal.goals} ⚽</span>
+                                </div>
+                            ` : '<span class="no-scorer">Kein Torschütze</span>'}
+                        </div>
+                    </div>
                 </div>
             </div>
             
