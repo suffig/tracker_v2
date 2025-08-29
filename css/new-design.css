@@ -67,7 +67,7 @@ body {
 /* --- MODERN LOGIN DESIGN --- */
 .login-container {
   min-height: 100vh;
-  background: linear-gradient(135deg, var(--primary-green) 0%, var(--primary-green-dark) 100%);
+  background: linear-gradient(135deg, var(--accent-blue) 0%, #2563EB 100%);
   display: flex;
   align-items: center;
   justify-content: center;
