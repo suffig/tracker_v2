@@ -881,4 +881,3 @@ export function resetStatsState() {
     // Clear any module-specific state if needed
     analyticsEngine.clearCache();
 }
-export function resetStatsState() {}

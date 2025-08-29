@@ -84,6 +84,29 @@
           <i class="fas fa-star nav-icon"></i>
           <span class="nav-label">Spieler</span>
         </a>
+        <div class="nav-item dropdown" id="nav-tools">
+          <i class="fas fa-cog nav-icon"></i>
+          <span class="nav-label">Tools</span>
+          <div class="dropdown-menu" id="tools-dropdown">
+            <a href="#" onclick="showBackupRestore()" class="dropdown-item">
+              <i class="fas fa-archive mr-2"></i>
+              Backup & Restore
+            </a>
+            <a href="#" onclick="showPerformanceDashboard()" class="dropdown-item">
+              <i class="fas fa-tachometer-alt mr-2"></i>
+              Performance
+            </a>
+            <a href="#" onclick="showSettings()" class="dropdown-item">
+              <i class="fas fa-cog mr-2"></i>
+              Einstellungen
+            </a>
+            <div class="dropdown-divider"></div>
+            <a href="#" onclick="showAbout()" class="dropdown-item">
+              <i class="fas fa-info-circle mr-2"></i>
+              Über die App
+            </a>
+          </div>
+        </div>
         <button id="logout-btn" class="nav-item logout-nav" title="Abmelden">
           <i class="fas fa-sign-out-alt nav-icon"></i>
           <span class="nav-label">Logout</span>
