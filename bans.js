@@ -1,16 +1,21 @@
 import { showModal, hideModal, showSuccessAndCloseModal } from './modal.js';
-import { supabase } from './supabaseClient.js';
+import { supabaseDb } from './supabaseClient.js';
 import { ErrorHandler } from './utils.js';
 import { isInReadOnlyMode } from './appState.js';
 
 // --- Helper-Funktion: Spieler für Team laden ---
 async function getPlayersByTeam(team) {
-    const { data, error } = await supabase.from('players').select('*').eq('team', team);
-    if (error) {
+    try {
+        const result = await supabaseDb.select('players', '*', { eq: { team } });
+        if (result.error) {
+            console.warn('Fehler beim Laden der Spieler:', result.error.message);
+            return [];
+        }
+        return result.data || [];
+    } catch (error) {
         console.warn('Fehler beim Laden der Spieler:', error.message);
         return [];
     }
-    return data || [];
 }
 
 let bans = [];
@@ -24,23 +29,38 @@ const BAN_TYPES = [
 const ALLOWED_BAN_COUNTS = [1, 2, 3, 4, 5, 6];
 
 export async function loadBansAndRender(renderFn = renderBansLists) {
-    const [{ data: bansData, error: errorBans }, { data: playersData, error: errorPlayers }] = await Promise.all([
-        supabase.from('bans').select('*'),
-        supabase.from('players').select('*')
-    ]);
-    if (errorBans) {
-        ErrorHandler.showUserError(`Fehler beim Laden der Sperren: ${errorBans.message}`, "error");
+    try {
+        const [bansResult, playersResult] = await Promise.allSettled([
+            supabaseDb.select('bans', '*'),
+            supabaseDb.select('players', '*')
+        ]);
+
+        // Process bans data
+        if (bansResult.status === 'fulfilled' && !bansResult.value.error) {
+            bans = bansResult.value.data || [];
+        } else {
+            const error = bansResult.status === 'fulfilled' ? bansResult.value.error : bansResult.reason;
+            ErrorHandler.showUserError(`Fehler beim Laden der Sperren: ${error.message}`, "error");
+            bans = [];
+        }
+
+        // Process players data
+        if (playersResult.status === 'fulfilled' && !playersResult.value.error) {
+            playersCache = playersResult.value.data || [];
+        } else {
+            const error = playersResult.status === 'fulfilled' ? playersResult.value.error : playersResult.reason;
+            ErrorHandler.showUserError(`Fehler beim Laden der Spieler: ${error.message}`, "error");
+            playersCache = [];
+        }
+        
+        renderFn();
+    } catch (error) {
+        console.error('Error loading bans data:', error);
+        ErrorHandler.showUserError('Fehler beim Laden der Daten', 'error');
         bans = [];
-    } else {
-        bans = bansData || [];
-    }
-    if (errorPlayers) {
-        ErrorHandler.showUserError(`Fehler beim Laden der Spieler: ${errorPlayers.message}`, "error");
         playersCache = [];
-    } else {
-        playersCache = playersData || [];
+        renderFn();
     }
-    renderFn();
 }
 
 export function renderBansTab(containerId = "app") {
@@ -153,33 +173,61 @@ function renderBanList(list, containerId, active) {
 }
 
 async function saveBan(ban) {
-    if (ban.id) {
-        // Update
-        const { error } = await supabase
-            .from('bans')
-            .update({
+    try {
+        if (ban.id) {
+            // Update
+            const result = await supabaseDb.update('bans', {
                 player_id: ban.player_id,
                 team: ban.team,
                 type: ban.type,
                 totalgames: ban.totalgames,
                 matchesserved: ban.matchesserved,
                 reason: ban.reason
-            })
-            .eq('id', ban.id);
-        if (error) ErrorHandler.showUserError(`Fehler beim Speichern: ${error.message}`, "error");
-    } else {
-        // Insert
-        const { error } = await supabase
-            .from('bans')
-            .insert([{
+            }, { id: ban.id });
+            
+            if (result.error) {
+                ErrorHandler.showUserError(`Fehler beim Speichern: ${result.error.message}`, "error");
+                return;
+            }
+        } else {
+            // Insert
+            const result = await supabaseDb.insert('bans', {
                 player_id: ban.player_id,
                 team: ban.team,
                 type: ban.type,
                 totalgames: ban.totalgames,
                 matchesserved: ban.matchesserved || 0,
                 reason: ban.reason
-            }]);
-        if (error) ErrorHandler.showUserError(`Fehler beim Anlegen: ${error.message}`, "error");
+            });
+            
+            if (result.error) {
+                ErrorHandler.showUserError(`Fehler beim Anlegen: ${result.error.message}`, "error");
+                return;
+            }
+        }
+        
+        // Reload data after successful save
+        await loadBansAndRender();
+    } catch (error) {
+        console.error('Error saving ban:', error);
+        ErrorHandler.showUserError('Fehler beim Speichern der Sperre', 'error');
+    }
+}
+
+async function deleteBan(banId) {
+    try {
+        const result = await supabaseDb.deleteRow('bans', { id: banId });
+        if (result.error) {
+            ErrorHandler.showUserError(`Fehler beim Löschen: ${result.error.message}`, "error");
+            return;
+        }
+        
+        // Reload data after successful delete
+        await loadBansAndRender();
+        ErrorHandler.showUserError('Sperre erfolgreich gelöscht', 'success');
+    } catch (error) {
+        console.error('Error deleting ban:', error);
+        ErrorHandler.showUserError('Fehler beim Löschen der Sperre', 'error');
     }
 }
 
@@ -322,17 +370,31 @@ async function openBanForm(ban = null) {
 
 // Hilfsfunktion für andere Module:
 export async function decrementBansAfterMatch() {
-    const { data: bansData, error } = await supabase.from('bans').select('*');
-    if (error) return;
-    const updates = [];
-    bansData.forEach(ban => {
-        if (getRestGames(ban) > 0) {
-            updates.push(
-                supabase.from('bans').update({ matchesserved: (ban.matchesserved || 0) + 1 }).eq('id', ban.id)
-            );
+    try {
+        const result = await supabaseDb.select('bans', '*');
+        if (result.error) {
+            console.warn('Error loading bans for decrement:', result.error);
+            return;
         }
-    });
-    await Promise.all(updates);
+        
+        const bansData = result.data || [];
+        const updates = [];
+        
+        bansData.forEach(ban => {
+            if (getRestGames(ban) > 0) {
+                updates.push(
+                    supabaseDb.update('bans', 
+                        { matchesserved: (ban.matchesserved || 0) + 1 }, 
+                        { id: ban.id }
+                    )
+                );
+            }
+        });
+        
+        await Promise.allSettled(updates);
+    } catch (error) {
+        console.error('Error decrementing bans:', error);
+    }
 }
 
 // --- RESET-STATE-FUNKTION ---

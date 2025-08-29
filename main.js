@@ -9,6 +9,9 @@ let signUp, signIn, signOut;
 let renderKaderTab, renderBansTab, renderMatchesTab, renderStatsTab, renderFinanzenTab, renderSpielerTab;
 let resetKaderState, resetBansState, resetFinanzenState, resetMatchesState, resetStatsState, resetSpielerState;
 
+// Configuration variables
+let SUPABASE_URL, SUPABASE_ANON_KEY;
+
 // Initialize modules asynchronously
 async function initializeModules() {
     try {
@@ -19,6 +22,10 @@ async function initializeModules() {
         supabase = supabaseModule.supabase;
         supabaseDb = supabaseModule.supabaseDb;
         usingFallback = supabaseModule.usingFallback;
+        
+        // Import configuration for fallback status display
+        SUPABASE_URL = supabaseModule.SUPABASE_URL;
+        SUPABASE_ANON_KEY = supabaseModule.SUPABASE_ANON_KEY;
         
         const connectionModule = await import('./connectionMonitor.js');
         connectionMonitor = connectionModule.connectionMonitor;
@@ -129,6 +136,14 @@ function updateConnectionStatus(status) {
             indicator.textContent = status.reconnected ? 'Demo-Modus wiederhergestellt' : 'Demo-Modus';
             indicator.className = baseClass + ' bg-blue-500 text-white';
             indicator.title = 'Demo-Modus aktiv - Simulierte Daten. Klicken für Details.';
+        } else if (status.connectionType === 'real-fallback') {
+            indicator.textContent = status.reconnected ? 'Datenbankverbindung aktiv' : 'Datenbank (CDN umgangen)';
+            indicator.className = baseClass + ' bg-green-500 text-white';
+            indicator.title = 'Datenbankverbindung über direkte API aktiv. Klicken für Details.';
+        } else if (status.connectionType === 'cdn-blocked') {
+            indicator.textContent = status.reconnected ? 'Verbindung wird getestet...' : 'CDN blockiert - Teste Verbindung...';
+            indicator.className = baseClass + ' bg-yellow-500 text-white';
+            indicator.title = 'CDN blockiert - Teste direkte Datenbankverbindung. Klicken für Details.';
         } else {
             indicator.textContent = status.reconnected ? 'Verbindung wiederhergestellt' : 'Online';
             indicator.className = baseClass + ' bg-green-500 text-white';
@@ -262,7 +277,9 @@ function showConnectionDetails() {
 function getConnectionTypeText(type) {
     switch (type) {
         case 'real': return '🔗 Echte Datenbankverbindung';
+        case 'real-fallback': return '🔗 Datenbankverbindung (CDN umgangen)';
         case 'fallback': return '🔄 Demo-Modus (Simulierte Daten)';
+        case 'cdn-blocked': return '🚧 CDN blockiert - Teste Direktverbindung';
         case 'offline': return '📴 Offline';
         case 'expired': return '🔐 Session abgelaufen';
         case 'disconnected': return '❌ Verbindung unterbrochen';
@@ -638,10 +655,10 @@ async function renderLoginArea() {
                                 <label class="flex items-center space-x-2 cursor-pointer">
                                     <input 
                                         type="checkbox" 
-                                        id="readOnlyMode" 
-                                        name="readOnlyMode"
+                                        id="editMode" 
+                                        name="editMode"
                                         class="form-checkbox text-blue-600 rounded" />
-                                    <span class="form-label mb-0">Nur betrachten (keine Änderungen möglich)</span>
+                                    <span class="form-label mb-0">Bearbeiten erlauben (Änderungen möglich)</span>
                                 </label>
                             </div>
                             <button
@@ -676,7 +693,7 @@ async function renderLoginArea() {
                     e.preventDefault();
                     const emailInput = document.getElementById('email');
                     const passwordInput = document.getElementById('pw');
-                    const readOnlyCheckbox = document.getElementById('readOnlyMode');
+                    const editModeCheckbox = document.getElementById('editMode');
                     const loginBtn = document.querySelector('.login-btn');
                     
                     if (!emailInput || !passwordInput) {
@@ -684,8 +701,8 @@ async function renderLoginArea() {
                         return;
                     }
                     
-                    // Capture read-only mode preference
-                    const readOnlyMode = readOnlyCheckbox ? readOnlyCheckbox.checked : false;
+                    // Capture edit mode preference - inverted logic: checked = edit mode, unchecked = read-only mode
+                    const readOnlyMode = editModeCheckbox ? !editModeCheckbox.checked : true;
                     setReadOnlyMode(readOnlyMode);
                     console.log("🔑 Attempting login with:", emailInput.value, "Read-only mode:", readOnlyMode);
                     
@@ -800,10 +817,10 @@ async function showLoginForm() {
                             <label class="flex items-center space-x-2 cursor-pointer">
                                 <input 
                                     type="checkbox" 
-                                    id="readOnlyMode" 
-                                    name="readOnlyMode"
+                                    id="editMode" 
+                                    name="editMode"
                                     class="form-checkbox text-blue-600 rounded" />
-                                <span class="form-label mb-0">Nur betrachten (keine Änderungen möglich)</span>
+                                <span class="form-label mb-0">Bearbeiten erlauben (Änderungen möglich)</span>
                             </label>
                         </div>
                         <button
@@ -823,10 +840,10 @@ async function showLoginForm() {
                 e.preventDefault();
                 const email = document.getElementById('email').value;
                 const password = document.getElementById('pw').value;
-                const readOnlyCheckbox = document.getElementById('readOnlyMode');
+                const editModeCheckbox = document.getElementById('editMode');
                 
-                // Capture read-only mode preference
-                const readOnlyMode = readOnlyCheckbox ? readOnlyCheckbox.checked : false;
+                // Capture edit mode preference - inverted logic: checked = edit mode, unchecked = read-only mode
+                const readOnlyMode = editModeCheckbox ? !editModeCheckbox.checked : true;
                 setReadOnlyMode(readOnlyMode);
                 console.log(`🔑 Attempting login with: ${email}, Read-only mode: ${readOnlyMode}`);
                 
@@ -854,10 +871,12 @@ async function showLoginForm() {
 
 // Setup auth state listener after modules are loaded
 function setupAuthStateListener() {
-    if (!supabase || !supabase.auth) {
-        console.warn('Supabase not available for auth state listener');
+    if (!supabase || !supabase.auth || typeof supabase.auth.onAuthStateChange !== 'function') {
+        console.warn('Supabase auth not available for auth state listener');
         return;
     }
+    
+    console.log('🔧 Setting up auth state listener...');
     
     // Enhanced auth state change listener
     supabase.auth.onAuthStateChange(async (event, session) => {
@@ -867,8 +886,10 @@ function setupAuthStateListener() {
         setTimeout(async () => {
             try {
                 if (event === 'SIGNED_IN' && session) {
+                    console.log('✅ User signed in, showing main app');
                     await showMainApp();
                 } else {
+                    console.log('❌ User signed out, showing login form');
                     await showLoginForm();
                 }
             } catch (error) {
@@ -876,6 +897,8 @@ function setupAuthStateListener() {
             }
         }, 100);
     });
+    
+    console.log('✅ Auth state listener setup complete');
 }
 
 window.addEventListener('DOMContentLoaded', async () => {
@@ -905,8 +928,22 @@ function showFallbackStatus() {
         indicator.className = 'fixed top-2 right-2 z-50 px-3 py-1 rounded-full text-sm font-medium transition-all duration-300';
         document.body.appendChild(indicator);
     }
-    indicator.textContent = 'Demo-Modus (Supabase nicht konfiguriert)';
-    indicator.className = indicator.className.replace(/bg-\w+-\d+/g, '') + ' bg-blue-500 text-white cursor-pointer';
+    
+    // Check if we have real credentials configured
+    const hasRealCredentials = window.location.search.includes('supabase') || 
+        (SUPABASE_URL !== 'https://buduldeczjwnjvsckqat.supabase.co' && 
+         SUPABASE_ANON_KEY !== 'sb_publishable_wcOHaKNEW9rQ3anrRNlEpA_r1_wGda3' &&
+         SUPABASE_URL.includes('.supabase.co'));
+    
+    if (hasRealCredentials) {
+        indicator.textContent = 'CDN blockiert - Teste Verbindung...';
+        indicator.className = indicator.className.replace(/bg-\w+-\d+/g, '') + ' bg-yellow-500 text-white cursor-pointer';
+        indicator.title = 'CDN blockiert - Versuche direkte Datenbankverbindung';
+    } else {
+        indicator.textContent = 'Demo-Modus (Supabase nicht konfiguriert)';
+        indicator.className = indicator.className.replace(/bg-\w+-\d+/g, '') + ' bg-blue-500 text-white cursor-pointer';
+        indicator.title = 'Demo-Modus aktiv - Konfigurieren Sie Supabase für echte Daten';
+    }
     
     // Add click handler to show configuration help
     indicator.onclick = () => {
@@ -915,24 +952,58 @@ function showFallbackStatus() {
 }
 
 function showDemoModeConfigurationHelp() {
-    const helpContent = `
-        <div class="p-6 text-gray-700">
-            <h3 class="text-xl font-bold mb-4 text-blue-600">🔧 Demo-Modus Konfiguration</h3>
-            <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-4">
-                <p class="text-sm"><strong>Hinweis:</strong> Die Anwendung läuft im Demo-Modus mit simulierten Daten.</p>
+    const hasCredentials = SUPABASE_URL.includes('.supabase.co') && 
+                          SUPABASE_URL !== 'https://your-project.supabase.co';
+    
+    let helpContent;
+    
+    if (hasCredentials) {
+        helpContent = `
+            <div class="p-6 text-gray-700">
+                <h3 class="text-xl font-bold mb-4 text-yellow-600">🚧 CDN Blockiert - Datenbankverbindung wird getestet</h3>
+                <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4">
+                    <p class="text-sm"><strong>Status:</strong> Supabase-Bibliothek von CDN blockiert, aber Datenbank-Credentials sind konfiguriert.</p>
+                </div>
+                <h4 class="font-semibold mb-2">Die Anwendung versucht automatisch:</h4>
+                <ol class="list-decimal list-inside space-y-2 text-sm">
+                    <li>Direkte API-Verbindung zur konfigurierten Supabase-Datenbank</li>
+                    <li>Umgehung der blockierten CDN-Requests</li>
+                    <li>Fallback auf lokale Bibliothek falls verfügbar</li>
+                </ol>
+                
+                <h4 class="font-semibold mb-2 mt-4">Falls die Verbindung fehlschlägt:</h4>
+                <ul class="list-disc list-inside space-y-1 text-sm">
+                    <li>Deaktivieren Sie temporär Ihren Ad-Blocker</li>
+                    <li>Überprüfen Sie Ihre Netzwerkverbindung</li>
+                    <li>Stellen Sie sicher, dass Ihr Supabase-Projekt aktiv ist</li>
+                    <li>Kontaktieren Sie Ihren Netzwerkadministrator bezüglich CDN-Blockierung</li>
+                </ul>
+                
+                <div class="mt-4 p-3 bg-blue-50 rounded">
+                    <p class="text-xs text-blue-600"><strong>Konfigurierte Datenbank:</strong> ${SUPABASE_URL}</p>
+                </div>
             </div>
-            <h4 class="font-semibold mb-2">Um eine echte Supabase-Verbindung zu verwenden:</h4>
-            <ol class="list-decimal list-inside space-y-2 text-sm">
-                <li>Ersetzen Sie <code class="bg-gray-100 px-1 rounded">SUPABASE_URL</code> in supabaseClient.js</li>
-                <li>Ersetzen Sie <code class="bg-gray-100 px-1 rounded">SUPABASE_ANON_KEY</code> in supabaseClient.js</li>
-                <li>Stellen Sie sicher, dass die Supabase CDN geladen werden kann</li>
-                <li>Konfigurieren Sie die Datenbank-Tabellen gemäß SUPABASE_SETUP.md</li>
-            </ol>
-            <div class="mt-4 p-3 bg-gray-50 rounded">
-                <p class="text-xs text-gray-600">Weitere Informationen finden Sie in der Datei <strong>SUPABASE_SETUP.md</strong></p>
+        `;
+    } else {
+        helpContent = `
+            <div class="p-6 text-gray-700">
+                <h3 class="text-xl font-bold mb-4 text-blue-600">🔧 Demo-Modus Konfiguration</h3>
+                <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-4">
+                    <p class="text-sm"><strong>Hinweis:</strong> Die Anwendung läuft im Demo-Modus mit simulierten Daten.</p>
+                </div>
+                <h4 class="font-semibold mb-2">Um eine echte Supabase-Verbindung zu verwenden:</h4>
+                <ol class="list-decimal list-inside space-y-2 text-sm">
+                    <li>Ersetzen Sie <code class="bg-gray-100 px-1 rounded">SUPABASE_URL</code> in supabaseClient.js</li>
+                    <li>Ersetzen Sie <code class="bg-gray-100 px-1 rounded">SUPABASE_ANON_KEY</code> in supabaseClient.js</li>
+                    <li>Stellen Sie sicher, dass die Supabase CDN geladen werden kann</li>
+                    <li>Konfigurieren Sie die Datenbank-Tabellen gemäß SUPABASE_SETUP.md</li>
+                </ol>
+                <div class="mt-4 p-3 bg-gray-50 rounded">
+                    <p class="text-xs text-gray-600">Weitere Informationen finden Sie in der Datei <strong>SUPABASE_SETUP.md</strong></p>
+                </div>
             </div>
-        </div>
-    `;
+        `;
+    }
     
     ErrorHandler.showUserError(helpContent, 'info');
 }

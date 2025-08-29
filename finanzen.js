@@ -1,5 +1,5 @@
 import { showModal, hideModal, showSuccessAndCloseModal } from './modal.js';
-import { supabase } from './supabaseClient.js';
+import { supabaseDb } from './supabaseClient.js';
 import { matches } from './matches.js';
 import { ErrorHandler, loadingManager } from './utils.js';
 import { isInReadOnlyMode } from './appState.js';

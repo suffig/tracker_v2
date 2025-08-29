@@ -24,8 +24,18 @@ const supabaseConfig = {
   }
 };
 
-// Enhanced fallback client for when CDN is blocked
+// Enhanced fallback client for when CDN is blocked - make it a singleton
+let fallbackClientInstance = null;
+
 const createFallbackClient = () => {
+  // Return existing instance if already created
+  if (fallbackClientInstance) {
+    console.log('🔄 Returning existing fallback client instance');
+    return fallbackClientInstance;
+  }
+  
+  console.log('🔧 Creating new fallback client instance');
+  
   // Enhanced session state for fallback mode with persistence
   let fallbackSession = null;
   let authCallbacks = [];
@@ -181,11 +191,16 @@ const createFallbackClient = () => {
       },
       onAuthStateChange: (callback) => {
         console.warn('Supabase auth not available - using fallback');
+        console.log('📝 Registering auth callback, total callbacks:', authCallbacks.length + 1);
         authCallbacks.push(callback);
         // Initial callback
-        setTimeout(() => callback(fallbackSession ? 'SIGNED_IN' : 'SIGNED_OUT', fallbackSession), 100);
+        setTimeout(() => {
+          console.log('📢 Initial auth callback:', fallbackSession ? 'SIGNED_IN' : 'SIGNED_OUT');
+          callback(fallbackSession ? 'SIGNED_IN' : 'SIGNED_OUT', fallbackSession);
+        }, 100);
         return { data: { subscription: { unsubscribe: () => {
           authCallbacks = authCallbacks.filter(cb => cb !== callback);
+          console.log('🗑️ Auth callback unsubscribed, remaining:', authCallbacks.length);
         } } } };
       },
       signInWithPassword: ({ email, password }) => {
@@ -244,8 +259,13 @@ const createFallbackClient = () => {
             }
             
             // Notify all auth listeners
-            authCallbacks.forEach(callback => {
-              setTimeout(() => callback('SIGNED_IN', fallbackSession), 50);
+            console.log('🔔 Triggering auth state change for', authCallbacks.length, 'listeners');
+            authCallbacks.forEach((callback, index) => {
+              console.log(`🔔 Triggering callback ${index + 1}/${authCallbacks.length}`);
+              setTimeout(() => {
+                console.log(`📢 Calling auth callback ${index + 1}: SIGNED_IN`, fallbackSession.user.email);
+                callback('SIGNED_IN', fallbackSession);
+              }, 50);
             });
             
             resolve({ 
@@ -280,17 +300,23 @@ const createFallbackClient = () => {
         
         return new Promise((resolve) => {
           // Clear stored session
+          console.log('🗑️ Clearing fallback session and localStorage');
           fallbackSession = null;
           
           try {
             localStorage.removeItem('supabase.auth.token');
+            console.log('✅ localStorage cleared successfully');
           } catch (e) {
             console.warn('Could not clear stored session:', e);
           }
           
           // Notify all auth listeners
-          authCallbacks.forEach(callback => {
-            setTimeout(() => callback('SIGNED_OUT', null), 50);
+          console.log('📢 Notifying', authCallbacks.length, 'auth listeners of SIGNED_OUT');
+          authCallbacks.forEach((callback, index) => {
+            setTimeout(() => {
+              console.log(`📢 Calling auth callback ${index + 1}: SIGNED_OUT`);
+              callback('SIGNED_OUT', null);
+            }, 50);
           });
           
           resolve({ error: null });
@@ -588,6 +614,9 @@ const createFallbackClient = () => {
       return Promise.resolve({ error: null });
     }
   };
+  
+  // Cache the fallback client instance as a singleton
+  fallbackClientInstance = mockClient;
   return mockClient;
 };
 
@@ -608,12 +637,24 @@ const SUPABASE_ANON_KEY = (typeof process !== 'undefined' && process?.env?.VITE_
 let supabase;
 let usingFallback = false;
 
+// Forward declaration - will be properly initialized later
+let supabaseDb;
+
+// Update function - defined early to avoid hoisting issues
+const updateSupabaseDbClient = () => {
+    if (supabaseDb) {
+        supabaseDb.client = supabase;
+        console.log('📝 SupabaseDB client updated:', usingFallback ? 'fallback' : 'real');
+    }
+};
+
 // Enhanced CDN loading with multiple attempts and fallback sources
 async function loadSupabaseCDN() {
     const cdnSources = [
         'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2',
         'https://unpkg.com/@supabase/supabase-js@2',
-        'https://esm.sh/@supabase/supabase-js@2'
+        'https://esm.sh/@supabase/supabase-js@2',
+        './assets/supabase.min.js' // Local fallback
     ];
 
     for (const source of cdnSources) {
@@ -636,8 +677,8 @@ async function loadSupabaseCDN() {
                 };
                 script.onerror = () => reject(new Error(`Failed to load script from ${source}`));
                 
-                // Timeout after 10 seconds
-                setTimeout(() => reject(new Error(`Timeout loading from ${source}`)), 10000);
+                // Timeout after 5 seconds for faster fallback
+                setTimeout(() => reject(new Error(`Timeout loading from ${source}`)), 5000);
             });
 
             // Add script to document
@@ -679,27 +720,73 @@ async function initializeSupabase() {
             
             console.log('🔄 Attempting to connect to Supabase with provided credentials...');
             supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, supabaseConfig);
+            updateSupabaseDbClient(); // Update the wrapper's client reference
             
-            // Test the connection
-            const { data, error } = await supabase.from('players').select('id').limit(1);
-            if (error && !error.message.includes('relation') && !error.message.includes('does not exist')) {
-                throw error;
+            // Test the connection with a more comprehensive test
+            try {
+                const { data, error } = await supabase.from('players').select('id').limit(1);
+                
+                // Check for specific error types that indicate the database is not set up
+                if (error) {
+                    console.warn('Database connection test result:', error.message);
+                    
+                    // If the table doesn't exist, it means database is configured but not set up
+                    if (error.message.includes('relation') && error.message.includes('does not exist')) {
+                        console.log('✅ Supabase connection successful, but database tables not set up');
+                        console.log('📝 Please run the SQL commands from SUPABASE_SETUP.md to create the required tables');
+                        // Don't throw error - connection works, just needs setup
+                        return;
+                    }
+                    
+                    // Other errors might indicate authentication or network issues
+                    if (error.message.includes('Invalid JWT') || error.message.includes('JWT expired')) {
+                        throw new Error('Invalid Supabase credentials - please check your SUPABASE_URL and SUPABASE_ANON_KEY');
+                    }
+                    
+                    if (error.message.includes('Network request failed') || error.message.includes('Failed to fetch')) {
+                        throw new Error('Network error - cannot reach Supabase servers');
+                    }
+                    
+                    // For other errors, still try to continue as connection might work for auth
+                    console.warn('Database test returned error, but connection may still work:', error.message);
+                }
+                
+                console.log('✅ Supabase client created and tested successfully');
+                return;
+            } catch (testError) {
+                console.warn('Database connection test failed:', testError.message);
+                throw testError;
             }
-            
-            console.log('✅ Supabase client created and tested successfully');
-            return;
         } else {
             throw new Error('Supabase configuration not provided - Please set SUPABASE_URL and SUPABASE_ANON_KEY');
         }
     } catch (error) {
-        console.warn('⚠️ Supabase realtime not available - using enhanced fallback:', error.message);
-        console.log('📝 To connect to your Supabase database:');
-        console.log('   1. Replace SUPABASE_URL with your project URL');
-        console.log('   2. Replace SUPABASE_ANON_KEY with your anon key');
-        console.log('   3. Ensure network connectivity and CDN access');
-        console.log('   4. Check browser console for detailed error information');
+        console.warn('⚠️ Supabase initialization failed - using enhanced fallback:', error.message);
+        
+        // Provide more specific guidance based on error type
+        if (error.message.includes('All CDN sources failed to load')) {
+            console.log('📝 CDN Loading Failed - This is likely due to:');
+            console.log('   1. Ad blocker or content blocker preventing CDN access');
+            console.log('   2. Corporate firewall blocking external CDN requests');
+            console.log('   3. Network connectivity issues');
+            console.log('   4. Consider hosting Supabase library locally');
+        } else if (error.message.includes('configuration not provided')) {
+            console.log('📝 To connect to your Supabase database:');
+            console.log('   1. Replace SUPABASE_URL with your project URL');
+            console.log('   2. Replace SUPABASE_ANON_KEY with your anon key');
+            console.log('   3. Ensure network connectivity and CDN access');
+            console.log('   4. Check browser console for detailed error information');
+        } else {
+            console.log('📝 Database connection failed:');
+            console.log('   1. Check your SUPABASE_URL and SUPABASE_ANON_KEY');
+            console.log('   2. Verify your Supabase project is active');
+            console.log('   3. Check network connectivity');
+            console.log('   4. Review browser console for specific errors');
+        }
+        
         usingFallback = true;
         supabase = createFallbackClient();
+        updateSupabaseDbClient(); // Update the wrapper's client reference
     }
 }
 
@@ -713,6 +800,7 @@ try {
             SUPABASE_URL.includes('.supabase.co')) {
             console.log('🔄 Attempting to connect to Supabase...');
             supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, supabaseConfig);
+            updateSupabaseDbClient(); // Update the wrapper's client reference
             console.log('✅ Supabase client created successfully');
         } else {
             throw new Error('Supabase configuration not provided - Please set SUPABASE_URL and SUPABASE_ANON_KEY');
@@ -728,6 +816,7 @@ try {
     console.log('   3. Ensure the Supabase CDN can load');
     usingFallback = true;
     supabase = createFallbackClient();
+    updateSupabaseDbClient(); // Update the wrapper's client reference
 }
 
 // Provide async initialization for better error handling
@@ -755,7 +844,7 @@ if (typeof window !== 'undefined') {
     }
 }
 
-export { supabase, usingFallback };
+export { supabase, usingFallback, SUPABASE_URL, SUPABASE_ANON_KEY };
 
 // Enhanced wrapper with better connection handling and metrics
 class SupabaseWrapper {
@@ -1128,8 +1217,14 @@ class SupabaseWrapper {
   }
 }
 
+// Initialize the SupabaseDB wrapper after class definition
+supabaseDb = new SupabaseWrapper(null);
 
-export const supabaseDb = new SupabaseWrapper(supabase);
+// Export supabaseDb after initialization
+export { supabaseDb };
+
+// Initial setup of the client reference
+updateSupabaseDbClient();
 
 // Enhanced auth event handler with better error handling and monitoring
 const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
