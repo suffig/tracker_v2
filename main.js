@@ -9,6 +9,9 @@ let signUp, signIn, signOut;
 let renderKaderTab, renderBansTab, renderMatchesTab, renderStatsTab, renderFinanzenTab, renderSpielerTab;
 let resetKaderState, resetBansState, resetFinanzenState, resetMatchesState, resetStatsState, resetSpielerState;
 
+// Enhanced modules
+let searchAndFilter, achievementSystem, analyticsEngine, chartRenderer;
+
 // Configuration variables
 let SUPABASE_URL, SUPABASE_ANON_KEY;
 
@@ -77,7 +80,23 @@ async function initializeModules() {
         renderSpielerTab = spielerModule.renderSpielerTab;
         resetSpielerState = spielerModule.resetSpielerState;
         
+        // Load enhanced modules
+        const searchModule = await import('./search.js');
+        searchAndFilter = searchModule.searchAndFilter;
+        
+        const achievementsModule = await import('./achievements.js');
+        achievementSystem = achievementsModule.achievementSystem;
+        
+        const analyticsModule = await import('./analytics.js');
+        analyticsEngine = analyticsModule.analyticsEngine;
+        
+        const chartsModule = await import('./charts.js');
+        chartRenderer = chartsModule.chartRenderer;
+        
         console.log('✅ All modules loaded successfully');
+        
+        // Initialize enhanced features
+        await initializeEnhancedFeatures();
         
         // Setup auth state listener after modules are loaded
         setupAuthStateListener();
@@ -100,6 +119,66 @@ async function initializeModules() {
             `;
         }
         return false;
+    }
+}
+
+// Initialize enhanced features
+async function initializeEnhancedFeatures() {
+    try {
+        console.log('🚀 Initializing enhanced features...');
+        
+        // Initialize search and filter
+        if (searchAndFilter && typeof searchAndFilter.init === 'function') {
+            searchAndFilter.init();
+        }
+        
+        // Load achievement data
+        if (achievementSystem && typeof achievementSystem.loadBadges === 'function') {
+            await achievementSystem.loadBadges();
+        }
+        
+        // Add global search button to navigation
+        addGlobalSearchButton();
+        
+        console.log('✅ Enhanced features initialized');
+    } catch (error) {
+        console.warn('⚠️ Some enhanced features failed to initialize:', error);
+    }
+}
+
+// Add global search button to navigation
+function addGlobalSearchButton() {
+    const navContainer = document.querySelector('.nav-container');
+    if (!navContainer) return;
+    
+    // Check if search button already exists
+    if (document.getElementById('nav-search')) return;
+    
+    // Create search button
+    const searchButton = document.createElement('a');
+    searchButton.id = 'nav-search';
+    searchButton.href = '#';
+    searchButton.className = 'nav-item search-nav';
+    searchButton.title = 'Globale Suche (Strg+K)';
+    searchButton.innerHTML = `
+        <i class="fas fa-search nav-icon"></i>
+        <span class="nav-label">Suche</span>
+    `;
+    
+    // Add click handler
+    searchButton.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (searchAndFilter && typeof searchAndFilter.showGlobalSearchModal === 'function') {
+            searchAndFilter.showGlobalSearchModal();
+        }
+    });
+    
+    // Insert before logout button
+    const logoutBtn = document.getElementById('logout-btn');
+    if (logoutBtn) {
+        navContainer.insertBefore(searchButton, logoutBtn);
+    } else {
+        navContainer.appendChild(searchButton);
     }
 }
 
