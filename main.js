@@ -931,8 +931,8 @@ function showFallbackStatus() {
     
     // Check if we have real credentials configured
     const hasRealCredentials = window.location.search.includes('supabase') || 
-        (SUPABASE_URL !== 'https://your-project.supabase.co' && 
-         SUPABASE_ANON_KEY !== 'your-anon-key' &&
+        (SUPABASE_URL !== 'https://buduldeczjwnjvsckqat.supabase.co' && 
+         SUPABASE_ANON_KEY !== 'sb_publishable_wcOHaKNEW9rQ3anrRNlEpA_r1_wGda3' &&
          SUPABASE_URL.includes('.supabase.co'));
     
     if (hasRealCredentials) {
