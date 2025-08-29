@@ -119,12 +119,19 @@ class ConnectionMonitor {
             const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 
             try {
-                const { data, error } = await supabase
+                // Create a promise that will reject on timeout
+                const queryPromise = supabase
                     .from('players')
                     .select('id')
-                    .limit(1)
-                    .abortSignal(controller.signal);
+                    .limit(1);
 
+                const timeoutPromise = new Promise((_, reject) => {
+                    controller.signal.addEventListener('abort', () => {
+                        reject(new Error('Connection test timed out'));
+                    });
+                });
+
+                const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
                 clearTimeout(timeoutId);
 
                 if (error) throw error;

@@ -189,28 +189,6 @@ export class ErrorHandler {
                 setTimeout(() => notification.remove(), 300);
             }
         }, dismissDelay);
-
-        notification.innerHTML = `
-            <div class="rounded-lg p-4 shadow-lg ${colorClasses[type] || colorClasses.error}">
-                <div class="flex items-center justify-between">
-                    <div class="flex items-center">
-                        <i class="fas fa-${type === 'error' ? 'exclamation-triangle' : type === 'success' ? 'check-circle' : 'info-circle'} mr-2"></i>
-                        <span>${message}</span>
-                    </div>
-                    <button onclick="this.parentElement.parentElement.remove()" class="ml-4 text-white hover:text-gray-200">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-            </div>
-        `;
-
-        // Auto-remove after 5 seconds for error/warning, 3 seconds for success
-        const autoRemoveTime = type === 'success' ? 3000 : 5000;
-        setTimeout(() => {
-            if (notification && notification.parentElement) {
-                notification.remove();
-            }
-        }, autoRemoveTime);
     }
 
     static showSuccessMessage(message) {
