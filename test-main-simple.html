@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Test - Main App Simple</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    
+    <!-- Local CSS only -->
+    <link href="css/tailwind-play-output.css" rel="stylesheet">
+    <link href="css/new-design.css" rel="stylesheet">
+    <link href="assets/flowbite-minimal.css" rel="stylesheet" />
+    <link rel="stylesheet" href="assets/fonts/fontawesome-icons.css">
+    
+    <style>
+        /* Fallback styles for missing external resources */
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f4f6;
+            border-top: 4px solid #3b82f6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .fallback-supabase {
+            display: block;
+            background: orange;
+            color: white;
+            padding: 10px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body class="modern-theme">
+
+<!-- Fallback notification -->
+<div class="fallback-supabase">
+    Running in Demo Mode (External resources unavailable)
+</div>
+
+<!-- LOGIN AREA -->
+<div id="login-area"></div>
+
+<!-- MAIN APP -->
+<div class="app-container modern-design" style="display:none;">
+    <!-- MODERN BOTTOM NAVIGATION -->
+    <nav class="modern-bottom-nav" role="navigation" aria-label="Hauptnavigation">
+      <div class="nav-container">
+        <a id="nav-matches" href="#" class="nav-item active">
+          <i class="fas fa-futbol nav-icon"></i>
+          <span class="nav-label">Spiele</span>
+        </a>
+        <a id="nav-squad" href="#" class="nav-item">
+          <i class="fas fa-users nav-icon"></i>
+          <span class="nav-label">Kader</span>
+        </a>
+        <a id="nav-bans" href="#" class="nav-item">
+          <i class="fas fa-ban nav-icon"></i>
+          <span class="nav-label">Sperren</span>
+        </a>
+        <a id="nav-finanzen" href="#" class="nav-item">
+          <i class="fas fa-euro-sign nav-icon"></i>
+          <span class="nav-label">Finanzen</span>
+        </a>
+        <a id="nav-stats" href="#" class="nav-item">
+          <i class="fas fa-chart-bar nav-icon"></i>
+          <span class="nav-label">Stats</span>
+        </a>
+        <a id="nav-spieler" href="#" class="nav-item">
+          <i class="fas fa-star nav-icon"></i>
+          <span class="nav-label">Spieler</span>
+        </a>
+        <button id="logout-btn" class="nav-item logout-nav" title="Abmelden">
+          <i class="fas fa-sign-out-alt nav-icon"></i>
+          <span class="nav-label">Logout</span>
+        </button>
+      </div>
+    </nav>
+
+    <!-- MAIN CONTENT -->
+    <main id="main-content" class="page-container" role="main">
+        <div id="tab-loader" class="fixed top-0 left-0 w-full h-full bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50" style="display:none;" aria-hidden="true">
+            <div class="bg-white rounded-xl p-6 flex flex-col items-center gap-4 shadow-xl">
+                <div class="spinner"></div>
+                <div class="text-gray-600 font-medium">Lädt...</div>
+            </div>
+        </div>
+        <div id="app" role="region" aria-live="polite"></div>
+    </main>
+</div>
+
+<!-- MODAL ROOT -->
+<div id="modal-root"></div>
+
+<!-- Inline Supabase fallback -->
+<script>
+    // Create a minimal Supabase fallback
+    window.supabase = {
+        createClient: () => ({
+            auth: {
+                signUp: () => Promise.resolve({ error: null }),
+                signInWithPassword: () => Promise.resolve({ error: null }),
+                signOut: () => Promise.resolve({ error: null }),
+                onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } })
+            },
+            from: () => ({
+                select: () => Promise.resolve({ data: [], error: null }),
+                insert: () => Promise.resolve({ data: [], error: null }),
+                update: () => Promise.resolve({ data: [], error: null }),
+                delete: () => Promise.resolve({ data: [], error: null })
+            })
+        })
+    };
+</script>
+
+<script type="module" src="./main.js"></script>
+</body>
+</html>
