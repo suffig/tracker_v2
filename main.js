@@ -1352,10 +1352,12 @@ async function showLoginForm() {
             </div>
         `;
         
-        // Setup form handler
-        const form = document.getElementById('loginform');
-        if (form) {
-            form.addEventListener('submit', async (e) => {
+        // Setup form handler - ensure DOM is fully updated
+        setTimeout(() => {
+            const form = document.getElementById('loginform');
+            console.log('🔧 Setting up form handler, form found:', !!form);
+            if (form) {
+                form.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const emailInput = document.getElementById('email');
                 const passwordInput = document.getElementById('pw');
@@ -1394,8 +1396,9 @@ async function showLoginForm() {
                         submitBtn.disabled = false;
                     }
                 }
-            });
-        }
+                });
+            }
+        }, 100); // Small delay to ensure DOM is updated
     }
 }
 
