@@ -701,10 +701,16 @@ async function renderLoginArea() {
                         return;
                     }
                     
+                    // Clear any concatenated values and get fresh values
+                    const emailValue = emailInput.value.trim();
+                    const passwordValue = passwordInput.value.trim();
+                    
+                    console.log("🔑 Login attempt - Email:", emailValue, "Password length:", passwordValue.length);
+                    
                     // Capture edit mode preference - inverted logic: checked = edit mode, unchecked = read-only mode
                     const readOnlyMode = editModeCheckbox ? !editModeCheckbox.checked : true;
                     setReadOnlyMode(readOnlyMode);
-                    console.log("🔑 Attempting login with:", emailInput.value, "Read-only mode:", readOnlyMode);
+                    console.log("🔑 Read-only mode:", readOnlyMode);
                     
                     // Show loading state
                     if (loginBtn) {
@@ -713,13 +719,13 @@ async function renderLoginArea() {
                     }
                     
                     try {
-                        await signIn(emailInput.value, passwordInput.value);
+                        await signIn(emailValue, passwordValue);
                         console.log("✅ Login successful, waiting for auth state change");
                     } catch (error) {
                         console.error("❌ Login failed:", error);
                         if (loginBtn) {
                             loginBtn.disabled = false;
-                            loginBtn.innerHTML = '<i class="fas fa-sign-in-alt mr-2"></i> Anmelden';
+                            loginBtn.innerHTML = '<i class="fas fa-sign-in-alt mr-2"></i> <span>Anmelden</span>';
                         }
                     }
                 };
@@ -838,18 +844,29 @@ async function showLoginForm() {
         if (form) {
             form.addEventListener('submit', async (e) => {
                 e.preventDefault();
-                const email = document.getElementById('email').value;
-                const password = document.getElementById('pw').value;
+                const emailInput = document.getElementById('email');
+                const passwordInput = document.getElementById('pw');
                 const editModeCheckbox = document.getElementById('editMode');
+                
+                if (!emailInput || !passwordInput) {
+                    console.error("Login form inputs not found");
+                    return;
+                }
+                
+                // Clear any concatenated values and get fresh values
+                const email = emailInput.value.trim();
+                const password = passwordInput.value.trim();
+                
+                console.log("🔑 Login attempt - Email:", email, "Password length:", password.length);
                 
                 // Capture edit mode preference - inverted logic: checked = edit mode, unchecked = read-only mode
                 const readOnlyMode = editModeCheckbox ? !editModeCheckbox.checked : true;
                 setReadOnlyMode(readOnlyMode);
-                console.log(`🔑 Attempting login with: ${email}, Read-only mode: ${readOnlyMode}`);
+                console.log(`🔑 Read-only mode: ${readOnlyMode}`);
                 
                 const submitBtn = form.querySelector('button[type="submit"]');
                 if (submitBtn) {
-                    submitBtn.textContent = 'Anmelden...';
+                    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Anmelden...';
                     submitBtn.disabled = true;
                 }
                 
