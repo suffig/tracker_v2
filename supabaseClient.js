@@ -24,8 +24,18 @@ const supabaseConfig = {
   }
 };
 
-// Enhanced fallback client for when CDN is blocked
+// Enhanced fallback client for when CDN is blocked - make it a singleton
+let fallbackClientInstance = null;
+
 const createFallbackClient = () => {
+  // Return existing instance if already created
+  if (fallbackClientInstance) {
+    console.log('🔄 Returning existing fallback client instance');
+    return fallbackClientInstance;
+  }
+  
+  console.log('🔧 Creating new fallback client instance');
+  
   // Enhanced session state for fallback mode with persistence
   let fallbackSession = null;
   let authCallbacks = [];
@@ -604,6 +614,9 @@ const createFallbackClient = () => {
       return Promise.resolve({ error: null });
     }
   };
+  
+  // Cache the fallback client instance as a singleton
+  fallbackClientInstance = mockClient;
   return mockClient;
 };
 
