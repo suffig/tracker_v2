@@ -638,10 +638,10 @@ async function renderLoginArea() {
                                 <label class="flex items-center space-x-2 cursor-pointer">
                                     <input 
                                         type="checkbox" 
-                                        id="readOnlyMode" 
-                                        name="readOnlyMode"
+                                        id="editMode" 
+                                        name="editMode"
                                         class="form-checkbox text-blue-600 rounded" />
-                                    <span class="form-label mb-0">Nur betrachten (keine Änderungen möglich)</span>
+                                    <span class="form-label mb-0">Bearbeiten erlauben (Änderungen möglich)</span>
                                 </label>
                             </div>
                             <button
@@ -676,7 +676,7 @@ async function renderLoginArea() {
                     e.preventDefault();
                     const emailInput = document.getElementById('email');
                     const passwordInput = document.getElementById('pw');
-                    const readOnlyCheckbox = document.getElementById('readOnlyMode');
+                    const editModeCheckbox = document.getElementById('editMode');
                     const loginBtn = document.querySelector('.login-btn');
                     
                     if (!emailInput || !passwordInput) {
@@ -684,8 +684,8 @@ async function renderLoginArea() {
                         return;
                     }
                     
-                    // Capture read-only mode preference
-                    const readOnlyMode = readOnlyCheckbox ? readOnlyCheckbox.checked : false;
+                    // Capture edit mode preference - inverted logic: checked = edit mode, unchecked = read-only mode
+                    const readOnlyMode = editModeCheckbox ? !editModeCheckbox.checked : true;
                     setReadOnlyMode(readOnlyMode);
                     console.log("🔑 Attempting login with:", emailInput.value, "Read-only mode:", readOnlyMode);
                     
@@ -800,10 +800,10 @@ async function showLoginForm() {
                             <label class="flex items-center space-x-2 cursor-pointer">
                                 <input 
                                     type="checkbox" 
-                                    id="readOnlyMode" 
-                                    name="readOnlyMode"
+                                    id="editMode" 
+                                    name="editMode"
                                     class="form-checkbox text-blue-600 rounded" />
-                                <span class="form-label mb-0">Nur betrachten (keine Änderungen möglich)</span>
+                                <span class="form-label mb-0">Bearbeiten erlauben (Änderungen möglich)</span>
                             </label>
                         </div>
                         <button
@@ -823,10 +823,10 @@ async function showLoginForm() {
                 e.preventDefault();
                 const email = document.getElementById('email').value;
                 const password = document.getElementById('pw').value;
-                const readOnlyCheckbox = document.getElementById('readOnlyMode');
+                const editModeCheckbox = document.getElementById('editMode');
                 
-                // Capture read-only mode preference
-                const readOnlyMode = readOnlyCheckbox ? readOnlyCheckbox.checked : false;
+                // Capture edit mode preference - inverted logic: checked = edit mode, unchecked = read-only mode
+                const readOnlyMode = editModeCheckbox ? !editModeCheckbox.checked : true;
                 setReadOnlyMode(readOnlyMode);
                 console.log(`🔑 Attempting login with: ${email}, Read-only mode: ${readOnlyMode}`);
                 
