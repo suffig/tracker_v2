@@ -9,6 +9,9 @@ let signUp, signIn, signOut;
 let renderKaderTab, renderBansTab, renderMatchesTab, renderStatsTab, renderFinanzenTab, renderSpielerTab;
 let resetKaderState, resetBansState, resetFinanzenState, resetMatchesState, resetStatsState, resetSpielerState;
 
+// Configuration variables
+let SUPABASE_URL, SUPABASE_ANON_KEY;
+
 // Initialize modules asynchronously
 async function initializeModules() {
     try {
@@ -19,6 +22,10 @@ async function initializeModules() {
         supabase = supabaseModule.supabase;
         supabaseDb = supabaseModule.supabaseDb;
         usingFallback = supabaseModule.usingFallback;
+        
+        // Import configuration for fallback status display
+        SUPABASE_URL = supabaseModule.SUPABASE_URL;
+        SUPABASE_ANON_KEY = supabaseModule.SUPABASE_ANON_KEY;
         
         const connectionModule = await import('./connectionMonitor.js');
         connectionMonitor = connectionModule.connectionMonitor;

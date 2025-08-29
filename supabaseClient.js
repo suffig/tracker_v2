@@ -637,6 +637,17 @@ const SUPABASE_ANON_KEY = (typeof process !== 'undefined' && process?.env?.VITE_
 let supabase;
 let usingFallback = false;
 
+// Forward declaration - will be properly initialized later
+let supabaseDb;
+
+// Update function - defined early to avoid hoisting issues
+const updateSupabaseDbClient = () => {
+    if (supabaseDb) {
+        supabaseDb.client = supabase;
+        console.log('📝 SupabaseDB client updated:', usingFallback ? 'fallback' : 'real');
+    }
+};
+
 // Enhanced CDN loading with multiple attempts and fallback sources
 async function loadSupabaseCDN() {
     const cdnSources = [
@@ -833,7 +844,7 @@ if (typeof window !== 'undefined') {
     }
 }
 
-export { supabase, usingFallback };
+export { supabase, usingFallback, SUPABASE_URL, SUPABASE_ANON_KEY };
 
 // Enhanced wrapper with better connection handling and metrics
 class SupabaseWrapper {
@@ -1206,16 +1217,13 @@ class SupabaseWrapper {
   }
 }
 
+// Initialize the SupabaseDB wrapper after class definition
+supabaseDb = new SupabaseWrapper(null);
 
-export const supabaseDb = new SupabaseWrapper(null); // Will be initialized dynamically
+// Export supabaseDb after initialization
+export { supabaseDb };
 
-// Update the wrapper's client reference when supabase changes
-const updateSupabaseDbClient = () => {
-    supabaseDb.client = supabase;
-    console.log('📝 SupabaseDB client updated:', usingFallback ? 'fallback' : 'real');
-};
-
-// Initial setup
+// Initial setup of the client reference
 updateSupabaseDbClient();
 
 // Enhanced auth event handler with better error handling and monitoring
