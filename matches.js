@@ -3,6 +3,7 @@ import { decrementBansAfterMatch } from './bans.js';
 import { dataManager } from './dataManager.js';
 import { loadingManager, ErrorHandler, Performance, DOM } from './utils.js';
 import { supabase } from './supabaseClient.js';
+import { isInReadOnlyMode } from './appState.js';
 
 // Optimized data management with caching
 class MatchesDataManager {
@@ -142,9 +143,11 @@ export async function renderMatchesTab(containerId = "app") {
     app.innerHTML = `
         <div class="flex flex-col sm:flex-row sm:justify-between mb-4 gap-2">
             <h2 class="text-lg font-semibold">Matches</h2>
+            ${!isInReadOnlyMode() ? `
             <button id="add-match-btn" class="bg-green-600 text-white w-full sm:w-auto px-4 py-2 rounded-lg text-base flex items-center justify-center gap-2 active:scale-95 transition">
                 <i class="fas fa-plus"></i> <span>Match hinzufügen</span>
             </button>
+            ` : ''}
         </div>
         <div id="matches-list" class="space-y-3">
             <div class="flex items-center justify-center py-8">
@@ -154,10 +157,12 @@ export async function renderMatchesTab(containerId = "app") {
         </div>
     `;
 
-    // Attach event listener safely
-    const addMatchBtn = DOM.getElementById("add-match-btn");
-    if (addMatchBtn) {
-        addMatchBtn.onclick = () => openMatchForm();
+    // Attach event listener safely - only in edit mode
+    if (!isInReadOnlyMode()) {
+        const addMatchBtn = DOM.getElementById("add-match-btn");
+        if (addMatchBtn) {
+            addMatchBtn.onclick = () => openMatchForm();
+        }
     }
 
     // Subscribe to real-time changes

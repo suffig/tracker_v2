@@ -1,6 +1,7 @@
 import { showModal, hideModal, showSuccessAndCloseModal } from './modal.js';
 import { supabase } from './supabaseClient.js';
 import { ErrorHandler } from './utils.js';
+import { isInReadOnlyMode } from './appState.js';
 
 // --- Helper-Funktion: Spieler für Team laden ---
 async function getPlayersByTeam(team) {
@@ -49,12 +50,14 @@ export function renderBansTab(containerId = "app") {
     app.innerHTML = `
         <div class="mb-4">
             <h2 class="text-lg font-semibold dark:text-white">Sperren</h2>
+            ${!isInReadOnlyMode() ? `
             <div class="flex space-x-2 mt-4 mb-6">
                 <button id="add-ban-btn" class="w-full sm:w-auto bg-sky-600 hover:bg-sky-700 text-white px-4 py-3 rounded-lg text-base flex items-center gap-2 font-semibold transition shadow">
                     <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                     Sperre hinzufügen
                 </button>
             </div>
+            ` : ''}
             <div>
                 <h3 class="font-bold text-base mb-2 dark:text-white">Aktive Sperren</h3>
                 <div id="bans-active-list" class="mb-8"></div>
@@ -74,7 +77,13 @@ export function renderBansTab(containerId = "app") {
 
     loadBansAndRender(renderBansLists);
 
-    document.getElementById('add-ban-btn').onclick = () => openBanForm();
+    // Only set up add ban button if not in read-only mode
+    if (!isInReadOnlyMode()) {
+        const addBanBtn = document.getElementById('add-ban-btn');
+        if (addBanBtn) {
+            addBanBtn.onclick = () => openBanForm();
+        }
+    }
 }
 
 function renderBansLists() {
@@ -123,7 +132,7 @@ function renderBanList(list, containerId, active) {
                 ${ban.reason ? `<div class="text-xs text-gray-600">Grund: ${ban.reason}</div>` : ''}
             </div>
             <div class="flex gap-1">
-                ${active ? `
+                ${active && !isInReadOnlyMode() ? `
                 <button class="edit-ban-btn bg-sky-500 hover:bg-sky-600 text-white px-3 py-2 rounded-lg" title="Bearbeiten">
                   <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-1.5a2.121 2.121 0 00-3 0l-7.5 7.5a2.121 2.121 0 000 3l3.5 3.5a2.121 2.121 0 003 0l7.5-7.5a2.121 2.121 0 000-3z"/></svg>
                 </button>
@@ -133,9 +142,11 @@ function renderBanList(list, containerId, active) {
                 ` : ''}
             </div>
         `;
-        if (active) {
-            div.querySelector('.edit-ban-btn').onclick = () => openBanForm(ban);
-            div.querySelector('.delete-ban-btn').onclick = () => deleteBan(ban.id);
+        if (active && !isInReadOnlyMode()) {
+            const editBtn = div.querySelector('.edit-ban-btn');
+            const deleteBtn = div.querySelector('.delete-ban-btn');
+            if (editBtn) editBtn.onclick = () => openBanForm(ban);
+            if (deleteBtn) deleteBtn.onclick = () => deleteBan(ban.id);
         }
         c.appendChild(div);
     });

@@ -3,6 +3,7 @@ import { connectionMonitor, isDatabaseAvailable } from './connectionMonitor.js';
 import { dataManager } from './dataManager.js';
 import { loadingManager, ErrorHandler, eventBus } from './utils.js';
 import { showModal, hideModal } from './modal.js';
+import { setReadOnlyMode, isInReadOnlyMode } from './appState.js';
 
 import { signUp, signIn, signOut } from './auth.js';
 import { renderKaderTab } from './kader.js';
@@ -559,6 +560,16 @@ async function renderLoginArea() {
                                     class="form-input" 
                                     value="${pwValue}" />
                             </div>
+                            <div class="form-group">
+                                <label class="flex items-center space-x-2 cursor-pointer">
+                                    <input 
+                                        type="checkbox" 
+                                        id="readOnlyMode" 
+                                        name="readOnlyMode"
+                                        class="form-checkbox text-blue-600 rounded" />
+                                    <span class="form-label mb-0">Nur betrachten (keine Änderungen möglich)</span>
+                                </label>
+                            </div>
                             <button
                                 type="submit"
                                 class="btn btn-primary btn-lg w-full login-btn">
@@ -591,6 +602,7 @@ async function renderLoginArea() {
                     e.preventDefault();
                     const emailInput = document.getElementById('email');
                     const passwordInput = document.getElementById('pw');
+                    const readOnlyCheckbox = document.getElementById('readOnlyMode');
                     const loginBtn = document.querySelector('.login-btn');
                     
                     if (!emailInput || !passwordInput) {
@@ -598,7 +610,10 @@ async function renderLoginArea() {
                         return;
                     }
                     
-                    console.log("🔑 Attempting login with:", emailInput.value);
+                    // Capture read-only mode preference
+                    const readOnlyMode = readOnlyCheckbox ? readOnlyCheckbox.checked : false;
+                    setReadOnlyMode(readOnlyMode);
+                    console.log("🔑 Attempting login with:", emailInput.value, "Read-only mode:", readOnlyMode);
                     
                     // Show loading state
                     if (loginBtn) {
@@ -707,6 +722,16 @@ async function showLoginForm() {
                                 class="form-input"
                                 value="${pwValue}" />
                         </div>
+                        <div class="form-group">
+                            <label class="flex items-center space-x-2 cursor-pointer">
+                                <input 
+                                    type="checkbox" 
+                                    id="readOnlyMode" 
+                                    name="readOnlyMode"
+                                    class="form-checkbox text-blue-600 rounded" />
+                                <span class="form-label mb-0">Nur betrachten (keine Änderungen möglich)</span>
+                            </label>
+                        </div>
                         <button
                             type="submit"
                             class="btn btn-primary btn-lg w-full">
@@ -724,8 +749,13 @@ async function showLoginForm() {
                 e.preventDefault();
                 const email = document.getElementById('email').value;
                 const password = document.getElementById('pw').value;
+                const readOnlyCheckbox = document.getElementById('readOnlyMode');
                 
-                console.log(`🔑 Attempting login with: ${email}`);
+                // Capture read-only mode preference
+                const readOnlyMode = readOnlyCheckbox ? readOnlyCheckbox.checked : false;
+                setReadOnlyMode(readOnlyMode);
+                console.log(`🔑 Attempting login with: ${email}, Read-only mode: ${readOnlyMode}`);
+                
                 const submitBtn = form.querySelector('button[type="submit"]');
                 if (submitBtn) {
                     submitBtn.textContent = 'Anmelden...';

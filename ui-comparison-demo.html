@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>UI Mode Comparison</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
+        .mode-section { margin: 20px 0; padding: 20px; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .mode-title { color: #333; border-bottom: 2px solid #ddd; padding-bottom: 10px; }
+        .card { background: #fff; border: 1px solid #ddd; padding: 15px; margin: 10px 0; border-radius: 6px; }
+        .card-header { font-weight: bold; margin-bottom: 10px; }
+        .btn { padding: 8px 16px; margin: 5px; border: none; border-radius: 4px; cursor: pointer; }
+        .btn-primary { background: #3b82f6; color: white; }
+        .btn-secondary { background: #64748b; color: white; }
+        .btn-danger { background: #ef4444; color: white; }
+        .btn-success { background: #10b981; color: white; }
+        .hidden { display: none; }
+        .comparison { display: flex; gap: 20px; }
+        .mode-column { flex: 1; }
+        .mode-indicator { display: inline-block; padding: 4px 8px; border-radius: 4px; color: white; font-size: 12px; margin-bottom: 10px; }
+        .readonly-mode { background: #f59e0b; }
+        .edit-mode { background: #10b981; }
+    </style>
+</head>
+<body>
+    <h1>FIFA Tracker - UI Mode Comparison</h1>
+    
+    <div class="comparison">
+        <div class="mode-column">
+            <div class="mode-section">
+                <h2 class="mode-title">
+                    <span class="mode-indicator readonly-mode">NUR BETRACHTEN MODUS</span><br>
+                    Kader Verwaltung
+                </h2>
+                
+                <div class="card">
+                    <div class="card-header">⚽ AEK Athen</div>
+                    <p>Marktwert: 125M €</p>
+                    <!-- No add button in read-only mode -->
+                    
+                    <div style="margin-top: 15px;">
+                        <div style="padding: 10px; border: 1px solid #ddd; margin: 5px 0;">
+                            <strong>Müller</strong> - Torwart - 15M €<br>
+                            <small>Team: AEK Athen • Marktwert: 15M €</small>
+                            <!-- No edit/delete buttons in read-only mode -->
+                        </div>
+                        <div style="padding: 10px; border: 1px solid #ddd; margin: 5px 0;">
+                            <strong>Schmidt</strong> - Verteidiger - 20M €<br>
+                            <small>Team: AEK Athen • Marktwert: 20M €</small>
+                            <!-- No edit/delete buttons in read-only mode -->
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">💰 Finanzen</div>
+                    <!-- No add transaction button in read-only mode -->
+                    <p>AEK Balance: 50M € | Real Balance: 75M €</p>
+                    
+                    <div style="margin-top: 15px;">
+                        <div style="padding: 8px; border-left: 3px solid #10b981; margin: 5px 0;">
+                            <strong>Spielerverkauf - Real</strong><br>
+                            +25M € - Schmidt Transfer
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">🚫 Sperren</div>
+                    <!-- No add ban button in read-only mode -->
+                    
+                    <div style="margin-top: 15px;">
+                        <div style="padding: 10px; border: 1px solid #ef4444; margin: 5px 0;">
+                            <strong>Müller (AEK)</strong><br>
+                            <small>Typ: Rote Karte | Verbleibend: 1 Spiel</small>
+                            <!-- No edit/delete buttons in read-only mode -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="mode-column">
+            <div class="mode-section">
+                <h2 class="mode-title">
+                    <span class="mode-indicator edit-mode">BEARBEITEN MODUS</span><br>
+                    Kader Verwaltung
+                </h2>
+                
+                <div class="card">
+                    <div class="card-header">⚽ AEK Athen</div>
+                    <p>Marktwert: 125M €</p>
+                    <button class="btn btn-primary">+ Neuen Spieler hinzufügen</button>
+                    
+                    <div style="margin-top: 15px;">
+                        <div style="padding: 10px; border: 1px solid #ddd; margin: 5px 0;">
+                            <strong>Müller</strong> - Torwart - 15M €<br>
+                            <small>Team: AEK Athen • Marktwert: 15M €</small><br>
+                            <button class="btn btn-secondary">✏️ Bearbeiten</button>
+                            <button class="btn btn-danger">🗑️ Löschen</button>
+                            <button class="btn btn-secondary">➡️ Zu Ehemalige</button>
+                        </div>
+                        <div style="padding: 10px; border: 1px solid #ddd; margin: 5px 0;">
+                            <strong>Schmidt</strong> - Verteidiger - 20M €<br>
+                            <small>Team: AEK Athen • Marktwert: 20M €</small><br>
+                            <button class="btn btn-secondary">✏️ Bearbeiten</button>
+                            <button class="btn btn-danger">🗑️ Löschen</button>
+                            <button class="btn btn-secondary">➡️ Zu Ehemalige</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">💰 Finanzen</div>
+                    <button class="btn btn-success">+ Transaktion hinzufügen</button>
+                    <p>AEK Balance: 50M € | Real Balance: 75M €</p>
+                    
+                    <div style="margin-top: 15px;">
+                        <div style="padding: 8px; border-left: 3px solid #10b981; margin: 5px 0;">
+                            <strong>Spielerverkauf - Real</strong><br>
+                            +25M € - Schmidt Transfer
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">🚫 Sperren</div>
+                    <button class="btn btn-primary">+ Sperre hinzufügen</button>
+                    
+                    <div style="margin-top: 15px;">
+                        <div style="padding: 10px; border: 1px solid #ef4444; margin: 5px 0;">
+                            <strong>Müller (AEK)</strong><br>
+                            <small>Typ: Rote Karte | Verbleibend: 1 Spiel</small><br>
+                            <button class="btn btn-secondary">✏️ Bearbeiten</button>
+                            <button class="btn btn-danger">❌ Löschen</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div style="margin-top: 30px; padding: 20px; background: #e5f3ff; border-radius: 8px;">
+        <h3>🎯 Implementierung erfolgreich!</h3>
+        <p><strong>Links (Nur betrachten Modus):</strong> Alle Bearbeitungs-, Lösch- und Hinzufügen-Buttons sind ausgeblendet. Benutzer können nur Daten einsehen.</p>
+        <p><strong>Rechts (Bearbeiten Modus):</strong> Alle Funktionen sind verfügbar. Benutzer können Daten ändern, hinzufügen und löschen.</p>
+        <p><strong>Auswahl:</strong> Die Auswahl erfolgt über eine Checkbox im Login-Formular: "Nur betrachten (keine Änderungen möglich)"</p>
+    </div>
+</body>
+</html>
