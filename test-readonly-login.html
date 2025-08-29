@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Test - Read-Only Mode Login</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .form-group { margin: 10px 0; }
+        .form-label { display: block; margin-bottom: 5px; }
+        .form-input { width: 100%; padding: 8px; margin: 5px 0; }
+        .btn { padding: 10px 20px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        .checkbox-container { display: flex; align-items: center; margin: 10px 0; }
+        .checkbox-container input { margin-right: 10px; }
+    </style>
+</head>
+<body>
+    <h1>Test: Read-Only Mode Selection</h1>
+    
+    <div id="login-area">
+        <form id="loginform">
+            <div class="form-group">
+                <label for="email" class="form-label">E-Mail-Adresse</label>
+                <input type="email" id="email" name="email" required placeholder="ihre@email.com" class="form-input" />
+            </div>
+            <div class="form-group">
+                <label for="pw" class="form-label">Passwort</label>
+                <input type="password" id="pw" name="password" required placeholder="Ihr Passwort" class="form-input" />
+            </div>
+            <div class="form-group">
+                <label class="checkbox-container">
+                    <input type="checkbox" id="readOnlyMode" name="readOnlyMode" />
+                    <span>Nur betrachten (keine Änderungen möglich)</span>
+                </label>
+            </div>
+            <button type="submit" class="btn">Anmelden</button>
+        </form>
+    </div>
+
+    <div id="result" style="margin-top: 20px; padding: 10px; background: #f0f0f0; display: none;">
+        <h3>Login Ergebnis:</h3>
+        <p id="result-text"></p>
+    </div>
+
+    <script>
+        // Simple test script to demonstrate the functionality
+        document.getElementById('loginform').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('pw').value;
+            const readOnlyMode = document.getElementById('readOnlyMode').checked;
+            
+            const resultDiv = document.getElementById('result');
+            const resultText = document.getElementById('result-text');
+            
+            resultText.innerHTML = `
+                <strong>E-Mail:</strong> ${email}<br>
+                <strong>Passwort:</strong> [versteckt]<br>
+                <strong>Read-Only Modus:</strong> ${readOnlyMode ? 'Ja - Nur betrachten' : 'Nein - Bearbeiten erlaubt'}
+            `;
+            
+            resultDiv.style.display = 'block';
+            
+            console.log('Login attempt:', { email, readOnlyMode });
+        });
+    </script>
+</body>
+</html>

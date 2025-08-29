@@ -3,6 +3,7 @@ import { connectionMonitor, isDatabaseAvailable } from './connectionMonitor.js';
 import { dataManager } from './dataManager.js';
 import { loadingManager, ErrorHandler, eventBus } from './utils.js';
 import { showModal, hideModal } from './modal.js';
+import { setReadOnlyMode, isInReadOnlyMode } from './appState.js';
 
 import { signUp, signIn, signOut } from './auth.js';
 import { renderKaderTab } from './kader.js';
@@ -27,8 +28,6 @@ let tabButtonsInitialized = false;
 let realtimeChannel = null;
 let isAppVisible = true;
 let inactivityCleanupTimer = null;
-// Global state for read-only mode
-let isReadOnlyMode = false;
 
 console.log("main.js gestartet");
 
@@ -612,8 +611,9 @@ async function renderLoginArea() {
                     }
                     
                     // Capture read-only mode preference
-                    isReadOnlyMode = readOnlyCheckbox ? readOnlyCheckbox.checked : false;
-                    console.log("🔑 Attempting login with:", emailInput.value, "Read-only mode:", isReadOnlyMode);
+                    const readOnlyMode = readOnlyCheckbox ? readOnlyCheckbox.checked : false;
+                    setReadOnlyMode(readOnlyMode);
+                    console.log("🔑 Attempting login with:", emailInput.value, "Read-only mode:", readOnlyMode);
                     
                     // Show loading state
                     if (loginBtn) {
@@ -752,8 +752,9 @@ async function showLoginForm() {
                 const readOnlyCheckbox = document.getElementById('readOnlyMode');
                 
                 // Capture read-only mode preference
-                isReadOnlyMode = readOnlyCheckbox ? readOnlyCheckbox.checked : false;
-                console.log(`🔑 Attempting login with: ${email}, Read-only mode: ${isReadOnlyMode}`);
+                const readOnlyMode = readOnlyCheckbox ? readOnlyCheckbox.checked : false;
+                setReadOnlyMode(readOnlyMode);
+                console.log(`🔑 Attempting login with: ${email}, Read-only mode: ${readOnlyMode}`);
                 
                 const submitBtn = form.querySelector('button[type="submit"]');
                 if (submitBtn) {
@@ -844,11 +845,6 @@ function showDemoModeConfigurationHelp() {
     `;
     
     ErrorHandler.showUserError(helpContent, 'info');
-}
-
-// Export function to get current read-only mode state
-export function isInReadOnlyMode() {
-    return isReadOnlyMode;
 }
 
 document.addEventListener('visibilitychange', handleVisibilityChange);

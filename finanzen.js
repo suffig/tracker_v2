@@ -2,7 +2,7 @@ import { showModal, hideModal, showSuccessAndCloseModal } from './modal.js';
 import { supabase } from './supabaseClient.js';
 import { matches } from './matches.js';
 import { ErrorHandler, loadingManager } from './utils.js';
-import { isInReadOnlyMode } from './main.js';
+import { isInReadOnlyMode } from './appState.js';
 
 let finances = {
     aekAthen: { balance: 0, debt: 0 },

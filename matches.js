@@ -3,7 +3,7 @@ import { decrementBansAfterMatch } from './bans.js';
 import { dataManager } from './dataManager.js';
 import { loadingManager, ErrorHandler, Performance, DOM } from './utils.js';
 import { supabase } from './supabaseClient.js';
-import { isInReadOnlyMode } from './main.js';
+import { isInReadOnlyMode } from './appState.js';
 
 // Optimized data management with caching
 class MatchesDataManager {

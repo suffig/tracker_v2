@@ -1,7 +1,7 @@
 import { showModal, hideModal, showSuccessAndCloseModal } from './modal.js';
 import { supabase } from './supabaseClient.js';
 import { ErrorHandler } from './utils.js';
-import { isInReadOnlyMode } from './main.js';
+import { isInReadOnlyMode } from './appState.js';
 
 // --- Helper-Funktion: Spieler für Team laden ---
 async function getPlayersByTeam(team) {

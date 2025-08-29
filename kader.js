@@ -3,7 +3,7 @@ import { showModal, hideModal, showSuccessAndCloseModal } from './modal.js';
 import { supabaseDb, supabase } from './supabaseClient.js';
 import { isDatabaseAvailable } from './connectionMonitor.js';
 import { ErrorHandler, loadingManager } from './utils.js';
-import { isInReadOnlyMode } from './main.js';
+import { isInReadOnlyMode } from './appState.js';
 
 let aekAthen = [];
 let realMadrid = [];
