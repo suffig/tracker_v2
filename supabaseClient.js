@@ -181,11 +181,16 @@ const createFallbackClient = () => {
       },
       onAuthStateChange: (callback) => {
         console.warn('Supabase auth not available - using fallback');
+        console.log('📝 Registering auth callback, total callbacks:', authCallbacks.length + 1);
         authCallbacks.push(callback);
         // Initial callback
-        setTimeout(() => callback(fallbackSession ? 'SIGNED_IN' : 'SIGNED_OUT', fallbackSession), 100);
+        setTimeout(() => {
+          console.log('📢 Initial auth callback:', fallbackSession ? 'SIGNED_IN' : 'SIGNED_OUT');
+          callback(fallbackSession ? 'SIGNED_IN' : 'SIGNED_OUT', fallbackSession);
+        }, 100);
         return { data: { subscription: { unsubscribe: () => {
           authCallbacks = authCallbacks.filter(cb => cb !== callback);
+          console.log('🗑️ Auth callback unsubscribed, remaining:', authCallbacks.length);
         } } } };
       },
       signInWithPassword: ({ email, password }) => {
@@ -244,8 +249,13 @@ const createFallbackClient = () => {
             }
             
             // Notify all auth listeners
-            authCallbacks.forEach(callback => {
-              setTimeout(() => callback('SIGNED_IN', fallbackSession), 50);
+            console.log('🔔 Triggering auth state change for', authCallbacks.length, 'listeners');
+            authCallbacks.forEach((callback, index) => {
+              console.log(`🔔 Triggering callback ${index + 1}/${authCallbacks.length}`);
+              setTimeout(() => {
+                console.log(`📢 Calling auth callback ${index + 1}: SIGNED_IN`, fallbackSession.user.email);
+                callback('SIGNED_IN', fallbackSession);
+              }, 50);
             });
             
             resolve({ 
@@ -280,17 +290,23 @@ const createFallbackClient = () => {
         
         return new Promise((resolve) => {
           // Clear stored session
+          console.log('🗑️ Clearing fallback session and localStorage');
           fallbackSession = null;
           
           try {
             localStorage.removeItem('supabase.auth.token');
+            console.log('✅ localStorage cleared successfully');
           } catch (e) {
             console.warn('Could not clear stored session:', e);
           }
           
           // Notify all auth listeners
-          authCallbacks.forEach(callback => {
-            setTimeout(() => callback('SIGNED_OUT', null), 50);
+          console.log('📢 Notifying', authCallbacks.length, 'auth listeners of SIGNED_OUT');
+          authCallbacks.forEach((callback, index) => {
+            setTimeout(() => {
+              console.log(`📢 Calling auth callback ${index + 1}: SIGNED_OUT`);
+              callback('SIGNED_OUT', null);
+            }, 50);
           });
           
           resolve({ error: null });

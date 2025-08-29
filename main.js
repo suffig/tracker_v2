@@ -854,10 +854,12 @@ async function showLoginForm() {
 
 // Setup auth state listener after modules are loaded
 function setupAuthStateListener() {
-    if (!supabase || !supabase.auth) {
-        console.warn('Supabase not available for auth state listener');
+    if (!supabase || !supabase.auth || typeof supabase.auth.onAuthStateChange !== 'function') {
+        console.warn('Supabase auth not available for auth state listener');
         return;
     }
+    
+    console.log('🔧 Setting up auth state listener...');
     
     // Enhanced auth state change listener
     supabase.auth.onAuthStateChange(async (event, session) => {
@@ -867,8 +869,10 @@ function setupAuthStateListener() {
         setTimeout(async () => {
             try {
                 if (event === 'SIGNED_IN' && session) {
+                    console.log('✅ User signed in, showing main app');
                     await showMainApp();
                 } else {
+                    console.log('❌ User signed out, showing login form');
                     await showLoginForm();
                 }
             } catch (error) {
@@ -876,6 +880,8 @@ function setupAuthStateListener() {
             }
         }, 100);
     });
+    
+    console.log('✅ Auth state listener setup complete');
 }
 
 window.addEventListener('DOMContentLoaded', async () => {
