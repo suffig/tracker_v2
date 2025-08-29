@@ -261,10 +261,7 @@ export class ErrorHandler {
         if (typeof window !== 'undefined' && window.connectionMonitor) {
             const status = window.connectionMonitor.getStatus();
             if (!status.connected) {
-                if (status.connectionType === 'fallback') {
-                    userMessage += ' (Demo-Modus aktiv)';
-                    errorType = 'info';
-                } else if (status.connectionType === 'offline') {
+                if (status.connectionType === 'offline') {
                     userMessage += ' (Offline)';
                 }
             }

@@ -2,11 +2,11 @@
  * Connection Monitor - Monitors database connectivity, handles reconnection,
  * provides KeepAlive/Heartbeat, and notifies UI of session/connection state.
  */
-import { supabase, usingFallback } from './supabaseClient.js';
+import { supabase } from './supabaseClient.js';
 
 // Get access to Supabase configuration for direct API testing
 const SUPABASE_URL = 'https://buduldeczjwnjvsckqat.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_wcOHaKNEW9rQ3anrRNlEpA_r1_wGda3';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ1ZHVsZGVjempqdm52c2NrcWF0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzU2NDU0MzMsImV4cCI6MjA1MTIyMTQzM30.EX6vEZnuYBfAeKJ1DWhEGdxVm_u2I3oPCQnl3Lj4uZQ';
 
 // Interval for KeepAlive (default: 4 minutes)
 const KEEPALIVE_INTERVAL = 4 * 60 * 1000;
@@ -113,80 +113,6 @@ class ConnectionMonitor {
         this.connectionMetrics.totalConnections++;
 
         try {
-            // If using fallback mode, we need to distinguish between demo mode and CDN-blocked real credentials
-            if (usingFallback) {
-                // Check if we have real credentials configured
-                const hasRealCredentials = SUPABASE_URL !== 'https://your-project.supabase.co' && 
-                                         SUPABASE_ANON_KEY !== 'your-anon-key' &&
-                                         SUPABASE_URL.includes('.supabase.co');
-                
-                // Only test real database connection if specifically requested and not in a regular health check
-                // For regular health checks, just simulate demo mode success
-                const isConnectivityTest = testType === 'connectivity-test';
-                
-                if (hasRealCredentials && isConnectivityTest) {
-                    // Try to test actual connection using fetch API as fallback
-                    try {
-                        const response = await fetch(`${SUPABASE_URL}/rest/v1/players?select=id&limit=1`, {
-                            method: 'GET',
-                            headers: {
-                                'apikey': SUPABASE_ANON_KEY,
-                                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-                                'Content-Type': 'application/json'
-                            }
-                        });
-                        
-                        if (response.ok || response.status === 404) {
-                            // 200 = success, 404 = table doesn't exist but connection works
-                            const responseTime = Math.random() * 200 + 100; // Simulate real response time
-                            this.updateMetrics(responseTime, true);
-                            
-                            if (!this.isConnected) {
-                                console.log('✅ Real database connection verified via direct API');
-                                this.isConnected = true;
-                                this.reconnectAttempts = 0;
-                                this.reconnectDelay = 1000;
-                                this.lastSuccessfulConnection = Date.now();
-                                this.lastError = null;
-                                this.connectionType = 'real-fallback';
-                                this.notifyListeners({ 
-                                    connected: true, 
-                                    reconnected: true,
-                                    message: 'Datenbankverbindung aktiv (CDN umgangen)'
-                                });
-                            }
-                            return true;
-                        } else if (response.status === 401 || response.status === 403) {
-                            throw new Error('Ungültige Supabase-Anmeldedaten');
-                        } else {
-                            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                        }
-                    } catch (fetchError) {
-                        console.warn('Direct API test failed:', fetchError.message);
-                        // Fall through to demo mode simulation
-                    }
-                }
-                
-                // Simulate demo mode response
-                const responseTime = Math.random() * 100 + 50; // Simulate 50-150ms response
-                this.updateMetrics(responseTime, true);
-                
-                if (!this.isConnected) {
-                    console.log('🔄 Demo mode - simulating connection restored');
-                    this.isConnected = true;
-                    this.reconnectAttempts = 0;
-                    this.reconnectDelay = 1000;
-                    this.lastSuccessfulConnection = Date.now();
-                    this.lastError = null;
-                    this.notifyListeners({ 
-                        connected: true, 
-                        reconnected: true,
-                        message: this.connectionType === 'fallback' ? 'Demo-Modus aktiv - Simulierte Daten verfügbar' : 'CDN blockiert - Teste Verbindung...'
-                    });
-                }
-                return true;
-            }
-
             // Check network connectivity first
             if (!navigator.onLine) {
                 throw new Error('Keine Internetverbindung');
@@ -211,13 +137,20 @@ class ConnectionMonitor {
                 this.updateMetrics(responseTime, true);
 
                 if (!this.isConnected) {
-                    console.log('✅ Database connection restored');
+                    console.log('✅ Database connection established');
                     this.isConnected = true;
                     this.reconnectAttempts = 0;
                     this.reconnectDelay = 1000;
                     this.lastSuccessfulConnection = Date.now();
                     this.lastError = null;
                     this.connectionType = 'real';
+                    this.notifyListeners({ 
+                        connected: true, 
+                        reconnected: true,
+                        message: 'Datenbankverbindung aktiv'
+                    });
+                }
+                return true;
                     this.notifyListeners({ 
                         connected: true, 
                         reconnected: true,

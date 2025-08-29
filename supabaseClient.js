@@ -1,12 +1,12 @@
-// Enhanced Supabase configuration with better error handling and performance
+// Production Supabase configuration with real database connection
 const supabaseConfig = {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: true,
     storageKey: 'supabase.auth.token',
-    autoRefreshTokenRetryAttempts: 5, // Increased retry attempts
-    tokenRefreshMargin: 60 // Refresh 60 seconds before expiry
+    autoRefreshTokenRetryAttempts: 5,
+    tokenRefreshMargin: 60
   },
   global: {
     headers: {
@@ -19,832 +19,32 @@ const supabaseConfig = {
   },
   realtime: {
     params: {
-      eventsPerSecond: 10 // Rate limiting for real-time events
+      eventsPerSecond: 10
     }
   }
 };
 
-// Enhanced fallback client for when CDN is blocked - make it a singleton
-let fallbackClientInstance = null;
+// Supabase configuration - Production values
+const SUPABASE_URL = 'https://buduldeczjwnjvsckqat.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ1ZHVsZGVjempqdm52c2NrcWF0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzU2NDU0MzMsImV4cCI6MjA1MTIyMTQzM30.EX6vEZnuYBfAeKJ1DWhEGdxVm_u2I3oPCQnl3Lj4uZQ';
 
-const createFallbackClient = () => {
-  // Return existing instance if already created
-  if (fallbackClientInstance) {
-    console.log('🔄 Returning existing fallback client instance');
-    return fallbackClientInstance;
-  }
-  
-  console.log('🔧 Creating new fallback client instance');
-  
-  // Enhanced session state for fallback mode with persistence
-  let fallbackSession = null;
-  let authCallbacks = [];
-  let realTimeSubscriptions = new Map();
-  let connectionQuality = 'excellent'; // simulate connection quality
-  
-  // Sample data for demo mode
-  const sampleData = {
-    players: [
-      { id: 1, name: 'Max Müller', team: 'AEK', position: 'ST', value: 120000, goals: 3, created_at: '2024-01-01' },
-      { id: 2, name: 'Tom Schmidt', team: 'AEK', position: 'TH', value: 100000, goals: 1, created_at: '2024-01-02' },
-      { id: 3, name: 'Leon Wagner', team: 'AEK', position: 'IV', value: 90000, goals: 1, created_at: '2024-01-03' },
-      { id: 4, name: 'Tim Fischer', team: 'AEK', position: 'ZM', value: 85000, goals: 1, created_at: '2024-01-04' },
-      { id: 5, name: 'Jan Becker', team: 'Real', position: 'ST', value: 110000, goals: 4, created_at: '2024-01-05' },
-      { id: 6, name: 'Paul Klein', team: 'Real', position: 'TH', value: 95000, goals: 1, created_at: '2024-01-06' },
-      { id: 7, name: 'Lukas Wolf', team: 'Real', position: 'IV', value: 88000, goals: 1, created_at: '2024-01-07' },
-      { id: 8, name: 'Ben Richter', team: 'Real', position: 'ZM', value: 92000, goals: 1, created_at: '2024-01-08' },
-      { id: 9, name: 'Alex Weber', team: 'Ehemalige', position: 'ST', value: 75000, goals: 2, created_at: '2024-01-09' },
-      { id: 10, name: 'Chris Meyer', team: 'Ehemalige', position: 'ZM', value: 70000, goals: 0, created_at: '2024-01-10' }
-    ],
-    matches: [
-      { id: 1, teama: 'AEK', teamb: 'Real', goalsa: 2, goalsb: 1, date: '2024-08-12', created_at: '2024-08-12', manofthematch: 'Max Müller', goalslista: ['Max Müller', 'Tom Schmidt'], goalslistb: ['Jan Becker'] },
-      { id: 2, teama: 'AEK', teamb: 'Real', goalsa: 1, goalsb: 3, date: '2024-08-10', created_at: '2024-08-10', manofthematch: 'Jan Becker', goalslista: ['Leon Wagner'], goalslistb: ['Jan Becker', 'Paul Klein', 'Lukas Wolf'] },
-      { id: 3, teama: 'AEK', teamb: 'Real', goalsa: 0, goalsb: 2, date: '2024-08-08', created_at: '2024-08-08', manofthematch: 'Ben Richter', goalslista: [], goalslistb: ['Jan Becker', 'Ben Richter'] },
-      { id: 4, teama: 'AEK', teamb: 'Real', goalsa: 2, goalsb: 2, date: '2024-08-05', created_at: '2024-08-05', manofthematch: 'Max Müller', goalslista: ['Max Müller', 'Tim Fischer'], goalslistb: ['Jan Becker', 'Paul Klein'] }
-    ],
-    bans: [
-      { id: 1, player_id: 1, matches_remaining: 2, reason: 'Gelb-Rot Karte', created_at: '2024-08-01' },
-      { id: 2, player_id: 5, matches_remaining: 1, reason: 'Unsportlichkeit', created_at: '2024-08-05' }
-    ],
-    transactions: [
-      { id: 1, amount: -50000, info: 'Spielerkauf: Max Müller', team: 'AEK', date: '2024-08-10', type: 'Spielerkauf', match_id: null },
-      { id: 2, amount: 30000, info: 'Spielerverkauf: Klaus Meyer', team: 'AEK', date: '2024-08-11', type: 'Spielerverkauf', match_id: null },
-      { id: 3, amount: -45000, info: 'Spielerkauf: Jan Becker', team: 'Real', date: '2024-08-10', type: 'Spielerkauf', match_id: null },
-      { id: 4, amount: 25000, info: 'Sponsoring Einnahme', team: 'Real', date: '2024-08-11', type: 'Sonstiges', match_id: null },
-      { id: 5, amount: 5000, info: 'Match-Sieg Preisgeld', team: 'AEK', date: '2024-08-12', type: 'Preisgeld', match_id: 1 },
-      { id: 6, amount: 3000, info: 'Match-Niederlage Preisgeld', team: 'Real', date: '2024-08-12', type: 'Preisgeld', match_id: 1 },
-      { id: 7, amount: 1500, info: 'SdS Bonus: Max Müller', team: 'AEK', date: '2024-08-12', type: 'SdS Bonus', match_id: 1 },
-      { id: 8, amount: 2000, info: 'Liga-Bonus', team: 'AEK', date: '2024-08-13', type: 'Sonstiges', match_id: null },
-      { id: 9, amount: -1000, info: 'Kartenstrafe', team: 'Real', date: '2024-08-13', type: 'Strafe', match_id: null },
-      { id: 10, amount: 3000, info: 'Match-Niederlage Preisgeld', team: 'AEK', date: '2024-08-10', type: 'Preisgeld', match_id: 2 },
-      { id: 11, amount: 5000, info: 'Match-Sieg Preisgeld', team: 'Real', date: '2024-08-10', type: 'Preisgeld', match_id: 2 },
-      { id: 12, amount: 1500, info: 'SdS Bonus: Jan Becker', team: 'Real', date: '2024-08-10', type: 'SdS Bonus', match_id: 2 },
-      { id: 13, amount: 3000, info: 'Match-Niederlage Preisgeld', team: 'AEK', date: '2024-08-08', type: 'Preisgeld', match_id: 3 },
-      { id: 14, amount: 5000, info: 'Match-Sieg Preisgeld', team: 'Real', date: '2024-08-08', type: 'Preisgeld', match_id: 3 },
-      { id: 15, amount: 1500, info: 'SdS Bonus: Ben Richter', team: 'Real', date: '2024-08-08', type: 'SdS Bonus', match_id: 3 },
-      { id: 16, amount: 4000, info: 'Unentschieden Preisgeld', team: 'AEK', date: '2024-08-05', type: 'Preisgeld', match_id: 4 },
-      { id: 17, amount: 4000, info: 'Unentschieden Preisgeld', team: 'Real', date: '2024-08-05', type: 'Preisgeld', match_id: 4 },
-      { id: 18, amount: 1500, info: 'SdS Bonus: Max Müller', team: 'AEK', date: '2024-08-05', type: 'SdS Bonus', match_id: 4 }
-    ],
-    finances: [
-      { id: 1, team: 'AEK', budget: 150000, created_at: '2024-01-01' },
-      { id: 2, team: 'Real', budget: 175000, created_at: '2024-01-01' }
-    ],
-    spieler_des_spiels: [
-      { id: 1, name: 'Max Müller', team: 'AEK', count: 3, created_at: '2024-08-01' },
-      { id: 2, name: 'Jan Becker', team: 'Real', count: 2, created_at: '2024-08-05' },
-      { id: 3, name: 'Tom Schmidt', team: 'AEK', count: 2, created_at: '2024-08-08' },
-      { id: 4, name: 'Paul Klein', team: 'Real', count: 1, created_at: '2024-08-10' },
-      { id: 5, name: 'Leon Wagner', team: 'AEK', count: 1, created_at: '2024-08-12' },
-      { id: 6, name: 'Lukas Wolf', team: 'Real', count: 0, created_at: '2024-08-13' },
-      { id: 7, name: 'Tim Fischer', team: 'AEK', count: 0, created_at: '2024-08-13' },
-      { id: 8, name: 'Ben Richter', team: 'Real', count: 0, created_at: '2024-08-13' }
-    ]
-  };
-  
-  // Helper function to filter data based on query parameters
-  const filterData = (tableName, query = {}) => {
-    let data = [...(sampleData[tableName] || [])];
-    
-    // Apply filters
-    if (query.eq) {
-      const [column, value] = query.eq;
-      data = data.filter(item => item[column] === value);
-    }
-    if (query.neq) {
-      const [column, value] = query.neq;
-      data = data.filter(item => item[column] !== value);
-    }
-    if (query.gt) {
-      const [column, value] = query.gt;
-      data = data.filter(item => item[column] > value);
-    }
-    if (query.gte) {
-      const [column, value] = query.gte;
-      data = data.filter(item => item[column] >= value);
-    }
-    if (query.lt) {
-      const [column, value] = query.lt;
-      data = data.filter(item => item[column] < value);
-    }
-    if (query.lte) {
-      const [column, value] = query.lte;
-      data = data.filter(item => item[column] <= value);
-    }
-    if (query.like) {
-      const [column, pattern] = query.like;
-      const regex = new RegExp(pattern.replace(/%/g, '.*'), 'i');
-      data = data.filter(item => regex.test(item[column]));
-    }
-    if (query.in) {
-      const [column, values] = query.in;
-      data = data.filter(item => values.includes(item[column]));
-    }
-    
-    // Apply ordering
-    if (query.order) {
-      const [column, direction = 'asc'] = query.order;
-      data.sort((a, b) => {
-        if (direction === 'desc') {
-          return b[column] > a[column] ? 1 : -1;
-        }
-        return a[column] > b[column] ? 1 : -1;
-      });
-    }
-    
-    // Apply range/limit
-    if (query.range) {
-      const [start, end] = query.range;
-      data = data.slice(start, end + 1);
-    } else if (query.limit) {
-      data = data.slice(0, query.limit);
-    }
-    
-    return data;
-  };
-  
-  const mockClient = {
-    auth: {
-      getSession: () => {
-        // Try to restore session from localStorage first
-        if (!fallbackSession) {
-          try {
-            const stored = localStorage.getItem('supabase.auth.token');
-            if (stored) {
-              const session = JSON.parse(stored);
-              // Check if session is still valid
-              if (session.expires_at && session.expires_at > Date.now() / 1000) {
-                fallbackSession = session;
-                console.log('✅ Restored demo session from localStorage');
-              } else {
-                localStorage.removeItem('supabase.auth.token');
-                console.log('🔄 Demo session expired, removed from localStorage');
-              }
-            }
-          } catch (e) {
-            console.warn('Could not restore demo session:', e);
-            localStorage.removeItem('supabase.auth.token');
-          }
-        }
-        
-        return Promise.resolve({ data: { session: fallbackSession } });
-      },
-      onAuthStateChange: (callback) => {
-        console.warn('Supabase auth not available - using fallback');
-        console.log('📝 Registering auth callback, total callbacks:', authCallbacks.length + 1);
-        authCallbacks.push(callback);
-        // Initial callback
-        setTimeout(() => {
-          console.log('📢 Initial auth callback:', fallbackSession ? 'SIGNED_IN' : 'SIGNED_OUT');
-          callback(fallbackSession ? 'SIGNED_IN' : 'SIGNED_OUT', fallbackSession);
-        }, 100);
-        return { data: { subscription: { unsubscribe: () => {
-          authCallbacks = authCallbacks.filter(cb => cb !== callback);
-          console.log('🗑️ Auth callback unsubscribed, remaining:', authCallbacks.length);
-        } } } };
-      },
-      signInWithPassword: ({ email, password }) => {
-        console.warn('⚠️ Supabase signInWithPassword not available - using enhanced fallback demo auth');
-        
-        // Simulate network delay based on connection quality
-        const delay = connectionQuality === 'excellent' ? 100 : connectionQuality === 'good' ? 300 : 1000;
-        
-        return new Promise((resolve) => {
-          setTimeout(() => {
-            // Enhanced validation for demo purposes
-            if (!email || !password) {
-              resolve({ 
-                error: new Error('E-Mail und Passwort sind erforderlich.') 
-              });
-              return;
-            }
-            
-            if (!email.includes('@')) {
-              resolve({ 
-                error: new Error('Bitte geben Sie eine gültige E-Mail-Adresse ein.') 
-              });
-              return;
-            }
-            
-            if (password.length < 3) {
-              resolve({ 
-                error: new Error('Passwort zu kurz (mindestens 3 Zeichen für Demo).') 
-              });
-              return;
-            }
-            
-            // Create a mock session for demo mode with enhanced data
-            fallbackSession = {
-              user: {
-                id: 'demo-user-' + Date.now(),
-                email: email,
-                created_at: new Date().toISOString(),
-                app_metadata: { provider: 'demo', providers: ['demo'] },
-                user_metadata: { demo_mode: true, connection_quality: connectionQuality },
-                aud: 'authenticated',
-                role: 'authenticated'
-              },
-              access_token: 'demo-token-' + Date.now(),
-              refresh_token: 'demo-refresh-' + Date.now(),
-              expires_at: Date.now() / 1000 + 3600, // 1 hour from now
-              expires_in: 3600,
-              token_type: 'bearer'
-            };
-            
-            // Store session in localStorage for persistence
-            try {
-              localStorage.setItem('supabase.auth.token', JSON.stringify(fallbackSession));
-            } catch (e) {
-              console.warn('Could not persist demo session:', e);
-            }
-            
-            // Notify all auth listeners
-            console.log('🔔 Triggering auth state change for', authCallbacks.length, 'listeners');
-            authCallbacks.forEach((callback, index) => {
-              console.log(`🔔 Triggering callback ${index + 1}/${authCallbacks.length}`);
-              setTimeout(() => {
-                console.log(`📢 Calling auth callback ${index + 1}: SIGNED_IN`, fallbackSession.user.email);
-                callback('SIGNED_IN', fallbackSession);
-              }, 50);
-            });
-            
-            resolve({ 
-              data: { user: fallbackSession.user, session: fallbackSession }, 
-              error: null 
-            });
-          }, delay);
-        });
-      },
-      signUp: ({ email, password }) => {
-        console.warn('Supabase signUp not available - using fallback demo mode');
-        
-        if (!email || !password) {
-          return Promise.resolve({ 
-            error: new Error('E-Mail und Passwort sind erforderlich.') 
-          });
-        }
-        
-        if (password.length < 6) {
-          return Promise.resolve({ 
-            error: new Error('Passwort muss mindestens 6 Zeichen haben.') 
-          });
-        }
-        
-        return Promise.resolve({ 
-          data: { user: null, session: null },
-          error: null 
-        });
-      },
-      signOut: () => {
-        console.warn('⚠️ Supabase signOut not available - using enhanced fallback');
-        
-        return new Promise((resolve) => {
-          // Clear stored session
-          console.log('🗑️ Clearing fallback session and localStorage');
-          fallbackSession = null;
-          
-          try {
-            localStorage.removeItem('supabase.auth.token');
-            console.log('✅ localStorage cleared successfully');
-          } catch (e) {
-            console.warn('Could not clear stored session:', e);
-          }
-          
-          // Notify all auth listeners
-          console.log('📢 Notifying', authCallbacks.length, 'auth listeners of SIGNED_OUT');
-          authCallbacks.forEach((callback, index) => {
-            setTimeout(() => {
-              console.log(`📢 Calling auth callback ${index + 1}: SIGNED_OUT`);
-              callback('SIGNED_OUT', null);
-            }, 50);
-          });
-          
-          resolve({ error: null });
-        });
-      }
-    },
-    from: (table) => {
-      let queryState = {};
-      
-      const executeQuery = () => {
-        const data = filterData(table, queryState);
-        queryState = {}; // Reset for next query
-        return Promise.resolve({ data, error: null });
-      };
-      
-      const queryBuilder = {
-        select: (columns = '*') => {
-          // Don't execute immediately, return the builder for chaining
-          return queryBuilder;
-        },
-        eq: (column, value) => {
-          queryState.eq = [column, value];
-          return queryBuilder;
-        },
-        neq: (column, value) => {
-          queryState.neq = [column, value];
-          return queryBuilder;
-        },
-        gt: (column, value) => {
-          queryState.gt = [column, value];
-          return queryBuilder;
-        },
-        gte: (column, value) => {
-          queryState.gte = [column, value];
-          return queryBuilder;
-        },
-        lt: (column, value) => {
-          queryState.lt = [column, value];
-          return queryBuilder;
-        },
-        lte: (column, value) => {
-          queryState.lte = [column, value];
-          return queryBuilder;
-        },
-        like: (column, pattern) => {
-          queryState.like = [column, pattern];
-          return queryBuilder;
-        },
-        in: (column, values) => {
-          queryState.in = [column, values];
-          return queryBuilder;
-        },
-        order: (column, options = {}) => {
-          queryState.order = [column, options.ascending === false ? 'desc' : 'asc'];
-          return queryBuilder;
-        },
-        range: (start, end) => {
-          queryState.range = [start, end];
-          return queryBuilder;
-        },
-        limit: (count) => {
-          queryState.limit = count;
-          return queryBuilder;
-        },
-        // Additional methods that might be called by SupabaseWrapper
-        onConflict: (column) => {
-          // Ignore in fallback mode
-          return queryBuilder;
-        },
-        single: () => {
-          // Return first result only
-          const data = filterData(table, queryState);
-          queryState = {};
-          const result = data.length > 0 ? data[0] : null;
-          return Promise.resolve({ data: result, error: null });
-        },
-        maybeSingle: () => {
-          // Same as single but doesn't error if no results
-          const data = filterData(table, queryState);
-          queryState = {};
-          const result = data.length > 0 ? data[0] : null;
-          return Promise.resolve({ data: result, error: null });
-        },
-        // Make the builder thenable (awaitable)
-        then: (resolve, reject) => {
-          executeQuery().then(resolve, reject);
-        },
-        catch: (reject) => {
-          executeQuery().catch(reject);
-        },
-        finally: (callback) => {
-          executeQuery().finally(callback);
-        },
-        insert: (data) => {
-          console.warn('Supabase insert not available in demo mode - simulating success');
-          // Simulate successful insert
-          const newId = Math.max(...(sampleData[table] || []).map(item => item.id || 0)) + 1;
-          const newItem = { id: newId, ...data, created_at: new Date().toISOString() };
-          if (sampleData[table]) {
-            sampleData[table].push(newItem);
-          }
-          
-          // Return a chainable object that supports .select()
-          return {
-            select: (columns = '*') => {
-              console.warn('Supabase insert().select() not available in demo mode - simulating success');
-              return {
-                single: () => {
-                  console.warn('Supabase insert().select().single() not available in demo mode - simulating success');
-                  return Promise.resolve({ data: newItem, error: null });
-                },
-                // Make select result thenable for backward compatibility
-                then: (resolve, reject) => {
-                  Promise.resolve({ data: [newItem], error: null }).then(resolve, reject);
-                },
-                catch: (reject) => {
-                  Promise.resolve({ data: [newItem], error: null }).catch(reject);
-                },
-                finally: (callback) => {
-                  Promise.resolve({ data: [newItem], error: null }).finally(callback);
-                }
-              };
-            },
-            single: () => {
-              console.warn('Supabase insert().single() not available in demo mode - simulating success');
-              return Promise.resolve({ data: newItem, error: null });
-            },
-            // Make it thenable for backward compatibility
-            then: (resolve, reject) => {
-              Promise.resolve({ data: [newItem], error: null }).then(resolve, reject);
-            },
-            catch: (reject) => {
-              Promise.resolve({ data: [newItem], error: null }).catch(reject);
-            },
-            finally: (callback) => {
-              Promise.resolve({ data: [newItem], error: null }).finally(callback);
-            }
-          };
-        },
-        update: (data) => {
-          console.warn('Supabase update not available in demo mode - simulating success');
-          
-          // Return a chainable object that supports .eq()
-          return {
-            eq: (column, value) => {
-              console.warn('Supabase update().eq() not available in demo mode - simulating success');
-              // Filter and update matching items
-              const filteredData = filterData(table, queryState);
-              queryState = {};
-              const matchingItems = filteredData.filter(item => item[column] === value);
-              matchingItems.forEach(item => {
-                Object.assign(item, data);
-              });
-              return Promise.resolve({ data: matchingItems, error: null });
-            },
-            // Make it thenable for backward compatibility
-            then: (resolve, reject) => {
-              const filteredData = filterData(table, queryState);
-              queryState = {};
-              filteredData.forEach(item => {
-                Object.assign(item, data);
-              });
-              Promise.resolve({ data: filteredData, error: null }).then(resolve, reject);
-            },
-            catch: (reject) => {
-              const filteredData = filterData(table, queryState);
-              queryState = {};
-              filteredData.forEach(item => {
-                Object.assign(item, data);
-              });
-              Promise.resolve({ data: filteredData, error: null }).catch(reject);
-            },
-            finally: (callback) => {
-              const filteredData = filterData(table, queryState);
-              queryState = {};
-              filteredData.forEach(item => {
-                Object.assign(item, data);
-              });
-              Promise.resolve({ data: filteredData, error: null }).finally(callback);
-            }
-          };
-        },
-        delete: () => {
-          console.warn('Supabase delete not available in demo mode - simulating success');
-          const filteredData = filterData(table, queryState);
-          queryState = {};
-          // Remove from sample data
-          if (sampleData[table] && filteredData.length > 0) {
-            sampleData[table] = sampleData[table].filter(item => 
-              !filteredData.some(toDelete => toDelete.id === item.id)
-            );
-          }
-          return Promise.resolve({ data: filteredData, error: null });
-        }
-      };
-      
-      return queryBuilder;
-    },
-    channel: (channelName = 'default') => {
-      console.warn('⚠️ Supabase realtime not available - using enhanced fallback simulation');
-      
-      let subscriptions = [];
-      let isSubscribed = false;
-      
-      const channelObj = {
-        on: (event, config, callback) => {
-          console.log(`📡 Simulating real-time subscription for ${event} on ${config?.table || 'unknown table'}`);
-          
-          subscriptions.push({
-            event,
-            config,
-            callback,
-            id: Math.random().toString(36).substr(2, 9)
-          });
-          
-          return channelObj;
-        },
-        
-        subscribe: (statusCallback) => {
-          console.log('📡 Simulating subscription activation...');
-          
-          isSubscribed = true;
-          realTimeSubscriptions.set(channelName, {
-            subscriptions,
-            isActive: true,
-            created: Date.now()
-          });
-          
-          // Simulate subscription process
-          setTimeout(() => {
-            if (typeof statusCallback === 'function') {
-              statusCallback('SUBSCRIBING');
-            }
-          }, 50);
-          
-          setTimeout(() => {
-            if (typeof statusCallback === 'function') {
-              if (connectionQuality === 'poor') {
-                statusCallback('CHANNEL_ERROR');
-                console.warn('📡 Simulated connection error due to poor connection quality');
-              } else {
-                statusCallback('SUBSCRIBED');
-                console.log('✅ Real-time subscription simulation active');
-              }
-            }
-          }, connectionQuality === 'excellent' ? 100 : 500);
-          
-          // Simulate periodic data updates in demo mode
-          if (subscriptions.some(s => s.config?.table)) {
-            const interval = setInterval(() => {
-              if (!isSubscribed) {
-                clearInterval(interval);
-                return;
-              }
-              
-              // Randomly trigger updates for demo purposes
-              if (Math.random() < 0.1) { // 10% chance every 5 seconds
-                subscriptions.forEach(sub => {
-                  if (sub.config?.table && typeof sub.callback === 'function') {
-                    const simulatedPayload = {
-                      eventType: ['INSERT', 'UPDATE', 'DELETE'][Math.floor(Math.random() * 3)],
-                      new: { id: Math.floor(Math.random() * 1000), updated_at: new Date().toISOString() },
-                      old: {},
-                      table: sub.config.table,
-                      schema: 'public',
-                      commit_timestamp: new Date().toISOString()
-                    };
-                    console.log('📡 Simulated real-time update:', simulatedPayload);
-                    sub.callback(simulatedPayload);
-                  }
-                });
-              }
-            }, 5000);
-          }
-          
-          return channelObj;
-        },
-        
-        unsubscribe: () => {
-          console.log('📡 Unsubscribing from real-time channel simulation');
-          isSubscribed = false;
-          realTimeSubscriptions.delete(channelName);
-          return Promise.resolve({ error: null });
-        }
-      };
-      
-      return channelObj;
-    },
-    
-    removeChannel: (channel) => {
-      console.log('📡 Removing real-time channel simulation');
-      if (channel && typeof channel.unsubscribe === 'function') {
-        channel.unsubscribe();
-      }
-      return Promise.resolve({ error: null });
-    }
-  };
-  
-  // Cache the fallback client instance as a singleton
-  fallbackClientInstance = mockClient;
-  return mockClient;
-};
-
-// Supabase configuration - replace with your actual values
-// You can also set these via environment variables if using a build system
-const SUPABASE_URL = (typeof process !== 'undefined' && process?.env?.VITE_SUPABASE_URL) || 
-                     (typeof process !== 'undefined' && process?.env?.REACT_APP_SUPABASE_URL) || 
-                     'https://buduldeczjwnjvsckqat.supabase.co';
-const SUPABASE_ANON_KEY = (typeof process !== 'undefined' && process?.env?.VITE_SUPABASE_ANON_KEY) || 
-                          (typeof process !== 'undefined' && process?.env?.REACT_APP_SUPABASE_ANON_KEY) || 
-                          'sb_publishable_wcOHaKNEW9rQ3anrRNlEpA_r1_wGda3';
-
-// Alternative: you can also hardcode your values here for static hosting
-// const SUPABASE_URL = 'https://yourproject.supabase.co';
-// const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...';
-
-// Try to create real Supabase client first, fallback if not available
+// Initialize Supabase client
 let supabase;
-let usingFallback = false;
 
-// Forward declaration - will be properly initialized later
-let supabaseDb;
-
-// Update function - defined early to avoid hoisting issues
-const updateSupabaseDbClient = () => {
-    if (supabaseDb) {
-        supabaseDb.client = supabase;
-        console.log('📝 SupabaseDB client updated:', usingFallback ? 'fallback' : 'real');
-    }
-};
-
-// Enhanced CDN loading with multiple attempts and fallback sources
-async function loadSupabaseCDN() {
-    const cdnSources = [
-        'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2',
-        'https://unpkg.com/@supabase/supabase-js@2',
-        'https://esm.sh/@supabase/supabase-js@2',
-        './assets/supabase.min.js' // Local fallback
-    ];
-
-    for (const source of cdnSources) {
-        try {
-            console.log(`🔄 Attempting to load Supabase from: ${source}`);
-            
-            // Create a script element to load the CDN
-            const script = document.createElement('script');
-            script.src = source;
-            
-            // Promise to handle script loading
-            const loadPromise = new Promise((resolve, reject) => {
-                script.onload = () => {
-                    if (window.supabase && window.supabase.createClient) {
-                        console.log(`✅ Successfully loaded Supabase from: ${source}`);
-                        resolve(true);
-                    } else {
-                        reject(new Error('Supabase object not found after loading'));
-                    }
-                };
-                script.onerror = () => reject(new Error(`Failed to load script from ${source}`));
-                
-                // Timeout after 5 seconds for faster fallback
-                setTimeout(() => reject(new Error(`Timeout loading from ${source}`)), 5000);
-            });
-
-            // Add script to document
-            document.head.appendChild(script);
-            
-            // Wait for loading
-            await loadPromise;
-            
-            // Clean up
-            script.remove();
-            return true;
-            
-        } catch (error) {
-            console.warn(`❌ Failed to load from ${source}:`, error.message);
-            // Clean up failed script
-            const scripts = document.querySelectorAll(`script[src="${source}"]`);
-            scripts.forEach(s => s.remove());
-        }
-    }
-    
-    throw new Error('All CDN sources failed to load');
-}
-
-// Initialize Supabase with enhanced error handling
-async function initializeSupabase() {
-    try {
-        // First, check if Supabase is already available (sync loading)
-        if (typeof window !== 'undefined' && window.supabase && window.supabase.createClient) {
-            console.log('✅ Supabase already available');
-        } else {
-            // Try to load from CDN asynchronously
-            await loadSupabaseCDN();
-        }
-        
-        // Check if we have valid configuration
-        if (SUPABASE_URL !== 'https://your-project.supabase.co' && 
-            SUPABASE_ANON_KEY !== 'your-anon-key' &&
-            SUPABASE_URL.includes('.supabase.co')) {
-            
-            console.log('🔄 Attempting to connect to Supabase with provided credentials...');
-            supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, supabaseConfig);
-            updateSupabaseDbClient(); // Update the wrapper's client reference
-            
-            // Test the connection with a more comprehensive test
-            try {
-                const { data, error } = await supabase.from('players').select('id').limit(1);
-                
-                // Check for specific error types that indicate the database is not set up
-                if (error) {
-                    console.warn('Database connection test result:', error.message);
-                    
-                    // If the table doesn't exist, it means database is configured but not set up
-                    if (error.message.includes('relation') && error.message.includes('does not exist')) {
-                        console.log('✅ Supabase connection successful, but database tables not set up');
-                        console.log('📝 Please run the SQL commands from SUPABASE_SETUP.md to create the required tables');
-                        // Don't throw error - connection works, just needs setup
-                        return;
-                    }
-                    
-                    // Other errors might indicate authentication or network issues
-                    if (error.message.includes('Invalid JWT') || error.message.includes('JWT expired')) {
-                        throw new Error('Invalid Supabase credentials - please check your SUPABASE_URL and SUPABASE_ANON_KEY');
-                    }
-                    
-                    if (error.message.includes('Network request failed') || error.message.includes('Failed to fetch')) {
-                        throw new Error('Network error - cannot reach Supabase servers');
-                    }
-                    
-                    // For other errors, still try to continue as connection might work for auth
-                    console.warn('Database test returned error, but connection may still work:', error.message);
-                }
-                
-                console.log('✅ Supabase client created and tested successfully');
-                return;
-            } catch (testError) {
-                console.warn('Database connection test failed:', testError.message);
-                throw testError;
-            }
-        } else {
-            throw new Error('Supabase configuration not provided - Please set SUPABASE_URL and SUPABASE_ANON_KEY');
-        }
-    } catch (error) {
-        console.warn('⚠️ Supabase initialization failed - using enhanced fallback:', error.message);
-        
-        // Provide more specific guidance based on error type
-        if (error.message.includes('All CDN sources failed to load')) {
-            console.log('📝 CDN Loading Failed - This is likely due to:');
-            console.log('   1. Ad blocker or content blocker preventing CDN access');
-            console.log('   2. Corporate firewall blocking external CDN requests');
-            console.log('   3. Network connectivity issues');
-            console.log('   4. Consider hosting Supabase library locally');
-        } else if (error.message.includes('configuration not provided')) {
-            console.log('📝 To connect to your Supabase database:');
-            console.log('   1. Replace SUPABASE_URL with your project URL');
-            console.log('   2. Replace SUPABASE_ANON_KEY with your anon key');
-            console.log('   3. Ensure network connectivity and CDN access');
-            console.log('   4. Check browser console for detailed error information');
-        } else {
-            console.log('📝 Database connection failed:');
-            console.log('   1. Check your SUPABASE_URL and SUPABASE_ANON_KEY');
-            console.log('   2. Verify your Supabase project is active');
-            console.log('   3. Check network connectivity');
-            console.log('   4. Review browser console for specific errors');
-        }
-        
-        usingFallback = true;
-        supabase = createFallbackClient();
-        updateSupabaseDbClient(); // Update the wrapper's client reference
-    }
-}
-
-// Initialize immediately for sync usage, but also provide async version
 try {
-    // Check if Supabase is available via CDN synchronously
-    if (typeof window !== 'undefined' && window.supabase && window.supabase.createClient) {
-        // Check if we have valid configuration
-        if (SUPABASE_URL !== 'https://your-project.supabase.co' && 
-            SUPABASE_ANON_KEY !== 'your-anon-key' &&
-            SUPABASE_URL.includes('.supabase.co')) {
-            console.log('🔄 Attempting to connect to Supabase...');
-            supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, supabaseConfig);
-            updateSupabaseDbClient(); // Update the wrapper's client reference
-            console.log('✅ Supabase client created successfully');
-        } else {
-            throw new Error('Supabase configuration not provided - Please set SUPABASE_URL and SUPABASE_ANON_KEY');
-        }
-    } else {
-        throw new Error('Supabase library not available (CDN may be blocked)');
-    }
+  if (typeof window !== 'undefined' && window.supabase && window.supabase.createClient) {
+    console.log('✅ Initializing Supabase client with production credentials...');
+    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, supabaseConfig);
+    console.log('✅ Supabase client created successfully');
+  } else {
+    throw new Error('Supabase library not available');
+  }
 } catch (error) {
-    console.warn('⚠️ Supabase realtime not available - using fallback:', error.message);
-    console.log('📝 To connect to your Supabase database:');
-    console.log('   1. Replace SUPABASE_URL with your project URL');
-    console.log('   2. Replace SUPABASE_ANON_KEY with your anon key');
-    console.log('   3. Ensure the Supabase CDN can load');
-    usingFallback = true;
-    supabase = createFallbackClient();
-    updateSupabaseDbClient(); // Update the wrapper's client reference
+  console.error('❌ Failed to initialize Supabase client:', error);
+  throw error;
 }
 
-// Provide async initialization for better error handling
-if (typeof window !== 'undefined') {
-    window.initializeSupabase = initializeSupabase;
-    
-    // Auto-retry initialization if initial attempt failed
-    if (usingFallback) {
-        console.log('🔄 Scheduling automatic retry of Supabase initialization...');
-        setTimeout(async () => {
-            try {
-                console.log('🔄 Retrying Supabase initialization...');
-                await initializeSupabase();
-                if (!usingFallback) {
-                    console.log('✅ Supabase initialization successful on retry');
-                    // Notify the app that real database is now available
-                    window.dispatchEvent(new CustomEvent('supabase-reconnected', {
-                        detail: { timestamp: new Date().toISOString() }
-                    }));
-                }
-            } catch (retryError) {
-                console.log('🔄 Retry failed, staying in fallback mode');
-            }
-        }, 5000); // Retry after 5 seconds
-    }
-}
-
-export { supabase, usingFallback, SUPABASE_URL, SUPABASE_ANON_KEY };
+export { supabase, SUPABASE_URL, SUPABASE_ANON_KEY };
 
 // Enhanced wrapper with better connection handling and metrics
 class SupabaseWrapper {
@@ -1323,7 +523,68 @@ class DatabasePerformanceMonitor {
 
 export const dbPerformanceMonitor = new DatabasePerformanceMonitor();
 
-// Add performance monitoring to window for debugging
+// Initialize the SupabaseDB wrapper
+const supabaseDb = new SupabaseWrapper(supabase);
+
+// Export supabaseDb
+export { supabaseDb };
+
+// Auth event handler with better error handling and monitoring
+const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+  const userInfo = session?.user?.email || 'No user';
+  console.log(`Auth state changed: ${event}`, userInfo);
+  
+  // Update connection stats based on auth events
+  if (event === 'SIGNED_IN') {
+    console.log('✅ User signed in successfully');
+    supabaseDb.resetStats();
+  } else if (event === 'SIGNED_OUT') {
+    console.log('👋 User signed out');
+    supabaseDb.resetStats();
+  } else if (event === 'TOKEN_REFRESHED') {
+    if (session) {
+      console.log('🔄 Auth token refreshed successfully');
+    } else {
+      console.error('❌ Token refresh failed - user may need to re-authenticate');
+      window.dispatchEvent(new CustomEvent('supabase-session-expired', {
+        detail: { timestamp: new Date().toISOString() }
+      }));
+    }
+  } else if (event === 'USER_UPDATED') {
+    console.log('👤 User profile updated');
+  } else if (event === 'PASSWORD_RECOVERY') {
+    console.log('🔐 Password recovery initiated');
+  }
+  
+  // Dispatch custom event for app-wide auth state management
+  window.dispatchEvent(new CustomEvent('auth-state-change', {
+    detail: { event, session, user: session?.user }
+  }));
+});
+
+// Add connection monitoring for debugging
 if (typeof window !== 'undefined') {
+  // Global access for debugging
+  window.supabase = supabase;
+  window.supabaseDb = supabaseDb;
   window.dbPerformanceMonitor = dbPerformanceMonitor;
+  
+  // Add debugging helpers
+  window.supabaseDebug = {
+    getStats: () => supabaseDb.getStats(),
+    resetStats: () => supabaseDb.resetStats(),
+    healthCheck: () => supabaseDb.healthCheck(),
+    getQueueLength: () => supabaseDb.requestQueue.length,
+    getActiveRequests: () => supabaseDb.activeRequests
+  };
+  
+  // Periodic stats logging in development
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    setInterval(() => {
+      const stats = supabaseDb.getStats();
+      if (stats.totalRequests > 0) {
+        console.log('📊 Supabase Stats:', stats);
+      }
+    }, 60000);
+  }
 }
