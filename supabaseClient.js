@@ -709,6 +709,7 @@ async function initializeSupabase() {
             
             console.log('🔄 Attempting to connect to Supabase with provided credentials...');
             supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, supabaseConfig);
+            updateSupabaseDbClient(); // Update the wrapper's client reference
             
             // Test the connection with a more comprehensive test
             try {
@@ -774,6 +775,7 @@ async function initializeSupabase() {
         
         usingFallback = true;
         supabase = createFallbackClient();
+        updateSupabaseDbClient(); // Update the wrapper's client reference
     }
 }
 
@@ -787,6 +789,7 @@ try {
             SUPABASE_URL.includes('.supabase.co')) {
             console.log('🔄 Attempting to connect to Supabase...');
             supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, supabaseConfig);
+            updateSupabaseDbClient(); // Update the wrapper's client reference
             console.log('✅ Supabase client created successfully');
         } else {
             throw new Error('Supabase configuration not provided - Please set SUPABASE_URL and SUPABASE_ANON_KEY');
@@ -802,6 +805,7 @@ try {
     console.log('   3. Ensure the Supabase CDN can load');
     usingFallback = true;
     supabase = createFallbackClient();
+    updateSupabaseDbClient(); // Update the wrapper's client reference
 }
 
 // Provide async initialization for better error handling
@@ -1203,7 +1207,16 @@ class SupabaseWrapper {
 }
 
 
-export const supabaseDb = new SupabaseWrapper(supabase);
+export const supabaseDb = new SupabaseWrapper(null); // Will be initialized dynamically
+
+// Update the wrapper's client reference when supabase changes
+const updateSupabaseDbClient = () => {
+    supabaseDb.client = supabase;
+    console.log('📝 SupabaseDB client updated:', usingFallback ? 'fallback' : 'real');
+};
+
+// Initial setup
+updateSupabaseDbClient();
 
 // Enhanced auth event handler with better error handling and monitoring
 const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
