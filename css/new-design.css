@@ -1,6 +1,6 @@
 /*! FIFA Tracker - New Modern Soccer Theme Design */
 
-/* --- MODERN SOCCER THEME DESIGN --- */
+/* --- MODERN SOCCER THEME DESIGN - DARK MODE --- */
 :root {
   /* Modern Soccer Color Palette */
   --primary-green: #10B981;
@@ -10,25 +10,27 @@
   --accent-red: #EF4444;
   --accent-blue: #3B82F6;
   
-  /* Background & Surface Colors */
-  --bg-primary: #F8FAFC;
-  --bg-secondary: #FFFFFF;
-  --bg-tertiary: #F1F5F9;
-  --surface-elevated: #FFFFFF;
+  /* Dark Theme Background & Surface Colors */
+  --bg-primary: #0F172A;           /* Dark slate background */
+  --bg-secondary: #1E293B;         /* Slightly lighter dark surface */
+  --bg-tertiary: #334155;          /* Medium dark for cards/panels */
+  --surface-elevated: #475569;     /* Elevated surfaces */
   
-  /* Text Colors */
-  --text-primary: #1E293B;
-  --text-secondary: #64748B;
-  --text-muted: #94A3B8;
-  --text-white: #FFFFFF;
+  /* Dark Theme Text Colors */
+  --text-primary: #F1F5F9;         /* Light text for primary content */
+  --text-secondary: #CBD5E1;       /* Medium light for secondary text */
+  --text-muted: #94A3B8;           /* Muted text for less important content */
+  --text-white: #FFFFFF;           /* Pure white for emphasis */
+  --text-dark: #1E293B;            /* Dark text for light backgrounds (buttons) */
   
-  /* Border & Shadow */
-  --border-light: #E2E8F0;
-  --border-medium: #CBD5E1;
-  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  /* Dark Theme Border & Shadow */
+  --border-light: #475569;         /* Light borders on dark backgrounds */
+  --border-medium: #64748B;        /* Medium borders */
+  --border-dark: #334155;          /* Subtle borders */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.4), 0 2px 4px -2px rgb(0 0 0 / 0.3);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.4), 0 4px 6px -4px rgb(0 0 0 / 0.3);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.5), 0 8px 10px -6px rgb(0 0 0 / 0.4);
   
   /* Spacing & Border Radius */
   --radius-sm: 6px;
@@ -361,8 +363,9 @@ body {
 }
 
 .btn-secondary:hover {
-  background: var(--border-light);
+  background: var(--surface-elevated);
   transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
 }
 
 .btn-danger {
@@ -1003,4 +1006,96 @@ body {
 .modal-close:hover {
   color: var(--text-primary);
   background: var(--bg-tertiary);
+}
+
+/* --- DARK THEME ENHANCEMENTS --- */
+/* Better contrast for dark theme */
+.form-input {
+  background: var(--bg-secondary);
+  border-color: var(--border-medium);
+  color: var(--text-primary);
+}
+
+.form-input:focus {
+  background: var(--bg-secondary);
+  border-color: var(--primary-green);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.3);
+}
+
+/* Enhanced readability for cards */
+.modern-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-dark);
+  box-shadow: var(--shadow-lg);
+}
+
+.modern-card:hover {
+  box-shadow: var(--shadow-xl);
+  transform: translateY(-2px);
+}
+
+/* Improved accordion styling */
+.accordion-header {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-dark);
+}
+
+.accordion-header:hover {
+  background: var(--bg-tertiary);
+}
+
+/* Better positioning badges contrast */
+.position-badge {
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Enhanced navigation styling */
+.modern-bottom-nav {
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border-dark);
+  box-shadow: 0 -4px 6px -1px rgb(0 0 0 / 0.4);
+}
+
+.nav-item {
+  color: var(--text-secondary);
+}
+
+.nav-item.active,
+.nav-item:hover {
+  color: var(--primary-green);
+  background: var(--bg-tertiary);
+}
+
+/* Improved scrollbar styling for dark theme */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-primary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-medium);
+  border-radius: var(--radius-sm);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* Dark theme selection styling */
+::selection {
+  background: var(--primary-green);
+  color: var(--text-white);
+}
+
+/* Improved focus indicators for dark theme */
+.btn:focus-visible,
+.form-input:focus-visible,
+.nav-item:focus-visible {
+  outline: 2px solid var(--primary-green);
+  outline-offset: 2px;
 }
